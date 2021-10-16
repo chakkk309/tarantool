@@ -1546,12 +1546,17 @@ static struct rule *Rule_merge(struct rule *pA, struct rule *pB){
 static struct rule *Rule_sort(struct rule *rp){
   int i;
   struct rule *pNext;
-  struct rule *x[32];
+  /*
+   * The size of the array depends on the maximum possible number of rules.
+   * We assert that there is no more than 2^32 rules. We need one more element
+   * in the array due to design of the loop below.
+   */
+  struct rule *x[33];
   memset(x, 0, sizeof(x));
   while( rp ){
     pNext = rp->next;
     rp->next = 0;
-    for(i=0; i<sizeof(x)/sizeof(x[0]) && x[i]; i++){
+    for(i=0; i<sizeof(x)/sizeof(x[0])-1 && x[i]; i++){
       rp = Rule_merge(x[i], rp);
       x[i] = 0;
     }
@@ -1559,7 +1564,7 @@ static struct rule *Rule_sort(struct rule *rp){
     rp = pNext;
   }
   rp = 0;
-  for(i=0; i<sizeof(x)/sizeof(x[0]); i++){
+  for(i=0; i<sizeof(x)/sizeof(x[0])-1; i++){
     rp = Rule_merge(x[i], rp);
   }
   return rp;
@@ -1672,6 +1677,11 @@ int main(int argc, char **argv)
     if( rp->iRule<0 ) rp->iRule = i++;
   }
   lem.startRule = lem.rule;
+  /*
+   * The following function will work correctly only if the number of rules does
+   * not exceed INT32_MAX, which is equal to 2 147 483 647.
+   */
+  assert(lem.nrule > 0 && lem.nrule <= 2147483647);
   lem.rule = Rule_sort(lem.rule);
 
   /* Generate a reprint of the grammar, if requested on the command line */
@@ -2343,6 +2353,7 @@ to follow the previous rule.");
           rp->noCode = 1;
           rp->precsym = 0;
           rp->index = psp->gp->nrule++;
+          assert(psp->gp->nrule > 0);
           rp->nextlhs = rp->lhs->rule;
           rp->lhs->rule = rp;
           rp->next = 0;
