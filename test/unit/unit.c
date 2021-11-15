@@ -3,6 +3,19 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+/*
+ * The definition of function set_sigint_cb is needed to avoid the error
+ * while linking. This occurs because in some unit tests there are calls
+ * of the function lbox_console_readline() from console.c that is included
+ * in box library. This function must call set_sigint_cb, defined in main.cc,
+ * that is not linked with tests.
+ */
+#include <tarantool_ev.h>
+typedef void (*sigint_cb_t)(ev_loop *loop, struct ev_signal *w, int revents);
+sigint_cb_t
+set_sigint_cb(sigint_cb_t new_sigint_cb){
+	return NULL;
+}
 
 enum { MAX_LEVELS = 10 };
 static int tests_done[MAX_LEVELS];

@@ -32,6 +32,7 @@
  */
 #include <stdbool.h>
 #include "trivia/util.h"
+#include <tarantool_ev.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -44,6 +45,11 @@ tarantool_exit(int);
 
 void
 load_cfg(void);
+
+typedef void (*sigint_cb_t)(ev_loop *loop, struct ev_signal *w, int revents);
+
+sigint_cb_t
+set_sigint_cb(sigint_cb_t new_sigint_cb);
 
 #if defined(__cplusplus)
 } /* extern "C" */

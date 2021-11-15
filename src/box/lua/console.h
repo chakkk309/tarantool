@@ -34,10 +34,15 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
+typedef struct ev_loop ev_loop;
+struct ev_signal;
 struct lua_State;
 
 void
 tarantool_lua_console_init(struct lua_State *L);
+
+typedef void (*sigint_cb_t)(ev_loop *loop, struct ev_signal *w, int revents);
+sigint_cb_t get_cb();
 
 #if defined(__cplusplus)
 } /* extern "C" */

@@ -84,6 +84,7 @@
 #include "core/crash.h"
 #include "ssl_cert_paths_discover.h"
 #include "core/errinj.h"
+#include "box/lua/console.h"
 
 static pid_t master_pid = getpid();
 static struct pidfh *pid_file_handle;
@@ -180,6 +181,35 @@ signal_cb(ev_loop *loop, struct ev_signal *w, int revents)
 	tarantool_exit(0);
 }
 
+static sigint_cb_t internal_sigint_cb = NULL;
+
+static void
+signal_sigint_cb(ev_loop *loop, struct ev_signal *w, int revents)
+{
+	(void) loop;
+	(void) w;
+	(void) revents;
+
+	if (internal_sigint_cb != NULL) {
+		internal_sigint_cb(loop, w, revents);
+		return;
+	}
+	/**
+	 * If not running in console mode, tarantool exits on SIGINT.
+	 * Complain about possibly sudden and unexpected death.
+	 */
+	say_crit("got signal %d - %s", w->signum, strsignal(w->signum));
+	tarantool_exit(0);
+}
+
+sigint_cb_t
+set_sigint_cb(sigint_cb_t new_sigint_cb)
+{
+	sigint_cb_t old_cb = internal_sigint_cb;
+	internal_sigint_cb = new_sigint_cb;
+	return old_cb;
+}
+
 static void
 signal_sigwinch_cb(ev_loop *loop, struct ev_signal *w, int revents)
 {
@@ -253,7 +283,7 @@ signal_init(void)
 	crash_signal_init();
 
 	ev_signal_init(&ev_sigs[0], sig_checkpoint, SIGUSR1);
-	ev_signal_init(&ev_sigs[1], signal_cb, SIGINT);
+	ev_signal_init(&ev_sigs[1], signal_sigint_cb, SIGINT);
 	ev_signal_init(&ev_sigs[2], signal_cb, SIGTERM);
 	ev_signal_init(&ev_sigs[3], signal_sigwinch_cb, SIGWINCH);
 	ev_signal_init(&ev_sigs[4], say_logrotate, SIGHUP);
