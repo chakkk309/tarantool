@@ -248,6 +248,16 @@ memtx_engine_recover_snapshot(struct memtx_engine *memtx,
 			say_error("snapshot `%s' has no EOF marker", cursor.name);
 	}
 
+	/* Complete space initialization. */
+	rc = space_foreach(space_on_initial_recovery_complete, NULL);
+	/* If failed - the snapshot has inconsistent data. We cannot start. */
+	if (rc != 0) {
+		struct error *e = diag_last_error(diag_get());
+		error_log(e);
+		panic("snapshot `%s' has inconsistent spaces: %s", filename,
+		      e->errmsg);
+	}
+
 	return 0;
 }
 

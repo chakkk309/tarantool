@@ -48,6 +48,8 @@
 #include "ck_constraint.h"
 #include "assoc.h"
 #include "constraint_id.h"
+#include "tuple_constraint.h"
+#include "tuple_constraint_func.h"
 
 int
 access_check_space(struct space *space, user_access_t access)
@@ -114,6 +116,46 @@ space_fill_index_map(struct space *space)
 	}
 }
 
+/**
+ * Prepare tuple format to have @a space->def specific format checks.
+ * Can return nonzero in case of error (diag is set).
+ */
+static int
+space_prepare_tuple_format(struct space *space)
+{
+	assert(space->def != NULL);
+	/* Set up constraints. */
+	struct tuple_format *format = space->format;
+	for (uint32_t i = 0; i < tuple_format_field_count(format); i++) {
+		struct tuple_field *field = tuple_format_field(format, i);
+		for (size_t j = 0; j < field->constraint_count; j++) {
+			struct tuple_constraint *constr = &field->constraint[j];
+			if (constr->check != tuple_constraint_noop_check)
+				continue;
+			if (tuple_constraint_func_init(constr, space) != 0)
+				return -1;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Revert changes in @a format that was made by @sa space_prepare_tuple_format.
+ */
+static int
+space_abandon_tuple_format(struct tuple_format *format)
+{
+	/* Clean up constraints. */
+	for (size_t i = 0; i < tuple_format_field_count(format); i++) {
+		struct tuple_field *field = tuple_format_field(format, i);
+		for (size_t j = 0; j < field->constraint_count; j++) {
+			struct tuple_constraint *constr = &field->constraint[j];
+			constr->destroy(constr);
+		}
+	}
+	return 0;
+}
+
 int
 space_create(struct space *space, struct engine *engine,
 	     const struct space_vtab *vtab, struct space_def *def,
@@ -178,6 +220,10 @@ space_create(struct space *space, struct engine *engine,
 				index_def->iid);
 	}
 	space_fill_index_map(space);
+
+	if (space_prepare_tuple_format(space) != 0)
+		goto fail_free_indexes;
+
 	rlist_create(&space->parent_fk_constraint);
 	rlist_create(&space->child_fk_constraint);
 	rlist_create(&space->ck_constraint);
@@ -221,9 +267,18 @@ fail:
 	free(space->check_unique_constraint_map);
 	if (space->def != NULL)
 		space_def_delete(space->def);
-	if (space->format != NULL)
+	if (space->format != NULL) {
+		space_abandon_tuple_format(space->format);
 		tuple_format_unref(space->format);
+	}
 	return -1;
+}
+
+int
+space_on_initial_recovery_complete(struct space *space, void *nothing)
+{
+	(void)nothing;
+	return space_prepare_tuple_format(space);
 }
 
 struct space *
@@ -259,8 +314,10 @@ space_delete(struct space *space)
 	}
 	free(space->index_map);
 	free(space->check_unique_constraint_map);
-	if (space->format != NULL)
+	if (space->format != NULL) {
+		space_abandon_tuple_format(space->format);
 		tuple_format_unref(space->format);
+	}
 	trigger_destroy(&space->before_replace);
 	trigger_destroy(&space->on_replace);
 	space_def_delete(space->def);

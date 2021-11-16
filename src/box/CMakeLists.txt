@@ -91,6 +91,8 @@ add_library(tuple STATIC
     tuple.c
     field_map.c
     tuple_format.c
+    tuple_constraint_def.c
+    tuple_constraint.c
     xrow_update.c
     xrow_update_field.c
     xrow_update_array.c
@@ -167,6 +169,7 @@ set(box_sources
     func.c
     func_cache.c
     func_def.c
+    tuple_constraint_func.c
     key_list.c
     alter.cc
     schema.cc
