@@ -42,7 +42,6 @@
 #include "box/box.h"
 #include "box/schema.h"
 #include "box/engine.h"
-#include "box/memtx_engine.h"
 #include "box/raft.h"
 
 static int
@@ -107,10 +106,7 @@ lbox_ctl_demote(struct lua_State *L)
 static int
 lbox_ctl_is_recovery_finished(struct lua_State *L)
 {
-	struct memtx_engine *memtx;
-	memtx = (struct memtx_engine *)engine_by_name("memtx");
-	lua_pushboolean(L, (memtx ?
-		(memtx->state < MEMTX_OK ? 0 : 1) : 0));
+	lua_pushboolean(L, memtx_engine_recovery_state < MEMTX_OK ? 0 : 1);
 	return 1;
 }
 

@@ -63,40 +63,6 @@ enum memtx_engine_free_mode {
 	MEMTX_ENGINE_DELAYED_FREE,
 };
 
-/**
- * The state of memtx recovery process.
- * There is a global state of the entire engine state of each
- * space. The state of a space is initialized from the engine
- * state when the space is created. The exception is system
- * spaces, which are always created in the final (OK) state.
- *
- * The states exist to speed up recovery: initial state
- * assumes write-only flow of sorted rows from a snapshot.
- * It's followed by a state for read-write recovery
- * of rows from the write ahead log; these rows are
- * inserted only into the primary key. The final
- * state is for a fully functional space.
- */
-enum memtx_recovery_state {
-	/** The space has no indexes. */
-	MEMTX_INITIALIZED,
-	/**
-	 * The space has only the primary index, which is in
-	 * write-only bulk insert mode.
-	 */
-	MEMTX_INITIAL_RECOVERY,
-	/**
-	 * The space has the primary index, which can be
-	 * used for reads and writes, but secondary indexes are
-	 * empty. The will be built at the end of recovery.
-	 */
-	MEMTX_FINAL_RECOVERY,
-	/**
-	 * The space and all its indexes are fully built.
-	 */
-	MEMTX_OK,
-};
-
 /** Memtx extents pool, available to statistics. */
 extern struct mempool memtx_index_extent_pool;
 
@@ -122,8 +88,6 @@ enum memtx_reserve_extents_num {
 
 struct memtx_engine {
 	struct engine base;
-	/** Engine recovery state. */
-	enum memtx_recovery_state state;
 	/** Non-zero if there is a checkpoint (snapshot) in progress. */
 	struct checkpoint *checkpoint;
 	/** The directory where to store snapshots. */

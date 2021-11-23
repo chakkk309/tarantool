@@ -58,6 +58,9 @@
 /* sync snapshot every 16MB */
 #define SNAP_SYNC_INTERVAL	(1 << 24)
 
+/** Engine recovery state. */
+enum memtx_recovery_state memtx_engine_recovery_state;
+
 static void
 checkpoint_cancel(struct checkpoint *ckpt);
 
@@ -342,7 +345,7 @@ memtx_engine_begin_initial_recovery(struct engine *engine,
 {
 	(void)vclock;
 	struct memtx_engine *memtx = (struct memtx_engine *)engine;
-	assert(memtx->state == MEMTX_INITIALIZED);
+	assert(memtx_engine_recovery_state == MEMTX_INITIALIZED);
 	/*
 	 * By default, enable fast start: bulk read of tuples
 	 * from the snapshot, in which they are stored in key
@@ -352,8 +355,8 @@ memtx_engine_begin_initial_recovery(struct engine *engine,
 	 * recovery mode. Enable all keys on start, to detect and
 	 * discard duplicates in the snapshot.
 	 */
-	memtx->state = (memtx->force_recovery ?
-			MEMTX_OK : MEMTX_INITIAL_RECOVERY);
+	memtx_engine_recovery_state = (memtx->force_recovery ?
+				       MEMTX_OK : MEMTX_INITIAL_RECOVERY);
 	return 0;
 }
 
@@ -361,10 +364,10 @@ static int
 memtx_engine_begin_final_recovery(struct engine *engine)
 {
 	struct memtx_engine *memtx = (struct memtx_engine *)engine;
-	if (memtx->state == MEMTX_OK)
+	if (memtx_engine_recovery_state == MEMTX_OK)
 		return 0;
 
-	assert(memtx->state == MEMTX_INITIAL_RECOVERY);
+	assert(memtx_engine_recovery_state == MEMTX_INITIAL_RECOVERY);
 	/* End of the fast path: loaded the primary key. */
 	space_foreach(memtx_end_build_primary_key, memtx);
 
@@ -374,7 +377,7 @@ memtx_engine_begin_final_recovery(struct engine *engine)
 		 * records using the primary key only,
 		 * then bulk-build all secondary keys.
 		 */
-		memtx->state = MEMTX_FINAL_RECOVERY;
+		memtx_engine_recovery_state = MEMTX_FINAL_RECOVERY;
 	} else {
 		/*
 		 * If force_recovery = true, it's
@@ -383,7 +386,7 @@ memtx_engine_begin_final_recovery(struct engine *engine)
 		 * to detect and discard duplicates in
 		 * unique keys.
 		 */
-		memtx->state = MEMTX_OK;
+		memtx_engine_recovery_state = MEMTX_OK;
 		if (space_foreach(memtx_build_secondary_keys, memtx) != 0)
 			return -1;
 	}
@@ -399,9 +402,9 @@ memtx_engine_begin_hot_standby(struct engine *engine)
 	 * to quickly switch to the hot standby instance after the master
 	 * instance exits.
 	 */
-	if (memtx->state != MEMTX_OK) {
-		assert(memtx->state == MEMTX_FINAL_RECOVERY);
-		memtx->state = MEMTX_OK;
+	if (memtx_engine_recovery_state != MEMTX_OK) {
+		assert(memtx_engine_recovery_state == MEMTX_FINAL_RECOVERY);
+		memtx_engine_recovery_state = MEMTX_OK;
 		if (space_foreach(memtx_build_secondary_keys, memtx) != 0)
 			return -1;
 	}
@@ -418,9 +421,9 @@ memtx_engine_end_recovery(struct engine *engine)
 	 * - it's a replication join
 	 * - instance was in the hot standby mode
 	 */
-	if (memtx->state != MEMTX_OK) {
-		assert(memtx->state == MEMTX_FINAL_RECOVERY);
-		memtx->state = MEMTX_OK;
+	if (memtx_engine_recovery_state != MEMTX_OK) {
+		assert(memtx_engine_recovery_state == MEMTX_FINAL_RECOVERY);
+		memtx_engine_recovery_state = MEMTX_OK;
 		if (space_foreach(memtx_build_secondary_keys, memtx) != 0)
 			return -1;
 	}
@@ -528,8 +531,8 @@ memtx_engine_bootstrap(struct engine *engine)
 {
 	struct memtx_engine *memtx = (struct memtx_engine *)engine;
 
-	assert(memtx->state == MEMTX_INITIALIZED);
-	memtx->state = MEMTX_OK;
+	assert(memtx_engine_recovery_state == MEMTX_INITIALIZED);
+	memtx_engine_recovery_state = MEMTX_OK;
 
 	/* Recover from bootstrap.snap */
 	say_info("initializing an empty data directory");
@@ -1263,7 +1266,7 @@ memtx_engine_new(const char *snap_dirname, bool force_recovery,
 	memtx->num_reserved_extents = 0;
 	memtx->reserved_extents = NULL;
 
-	memtx->state = MEMTX_INITIALIZED;
+	memtx_engine_recovery_state = MEMTX_INITIALIZED;
 	memtx->max_tuple_size = MAX_TUPLE_SIZE;
 	memtx->force_recovery = force_recovery;
 

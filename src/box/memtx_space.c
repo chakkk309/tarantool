@@ -835,8 +835,7 @@ static int
 memtx_space_add_primary_key(struct space *space)
 {
 	struct memtx_space *memtx_space = (struct memtx_space *)space;
-	struct memtx_engine *memtx = (struct memtx_engine *)space->engine;
-	switch (memtx->state) {
+	switch (memtx_engine_recovery_state) {
 	case MEMTX_INITIALIZED:
 		panic("can't create a new space before snapshot recovery");
 		break;
@@ -919,7 +918,6 @@ memtx_space_check_format(struct space *space, struct tuple_format *format)
 	if (txn_check_singlestatement(txn, "space format check") != 0)
 		return -1;
 
-	struct memtx_engine *memtx = (struct memtx_engine *)space->engine;
 	struct memtx_ddl_state state;
 	state.format = format;
 	state.cmp_def = pk->def->key_def;
@@ -946,7 +944,7 @@ memtx_space_check_format(struct space *space, struct tuple_format *format)
 		tuple_ref(state.cursor);
 
 		if (++count % MEMTX_DDL_YIELD_LOOPS == 0 &&
-		    memtx->state == MEMTX_OK)
+		    memtx_engine_recovery_state == MEMTX_OK)
 			fiber_sleep(0);
 
 		ERROR_INJECT_YIELD(ERRINJ_CHECK_FORMAT_DELAY);
@@ -1177,7 +1175,6 @@ memtx_space_build_index(struct space *src_space, struct index *new_index,
 	if (txn_check_singlestatement(txn, "index build") != 0)
 		return -1;
 
-	struct memtx_engine *memtx = (struct memtx_engine *)src_space->engine;
 	struct memtx_ddl_state state;
 	struct trigger on_replace;
 	/*
@@ -1246,7 +1243,7 @@ memtx_space_build_index(struct space *src_space, struct index *new_index,
 		state.cursor = tuple;
 		tuple_ref(state.cursor);
 		if (++count % MEMTX_DDL_YIELD_LOOPS == 0 &&
-		    memtx->state == MEMTX_OK)
+		    memtx_engine_recovery_state == MEMTX_OK)
 			fiber_sleep(0);
 		/*
 		 * Sleep after at least one tuple is inserted to test

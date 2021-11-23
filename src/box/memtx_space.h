@@ -92,8 +92,8 @@ static inline bool
 memtx_space_is_recovering(struct space *space)
 {
 	assert(space_is_memtx(space));
-	struct memtx_engine *memtx = (struct memtx_engine *)space->engine;
-	return memtx->state < MEMTX_OK;
+	(void) space;
+	return memtx_engine_recovery_state < MEMTX_OK;
 }
 
 #if defined(__cplusplus)
