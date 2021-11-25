@@ -596,6 +596,7 @@ port_lua_destroy(struct port *base)
 	struct port_lua *port = (struct port_lua *)base;
 	assert(port->vtab == &port_lua_vtab);
 	luaL_unref(tarantool_L, LUA_REGISTRYINDEX, port->ref);
+	TRASH(port);
 }
 
 /**

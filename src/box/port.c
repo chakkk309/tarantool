@@ -67,8 +67,10 @@ port_c_destroy(struct port *base)
 {
 	struct port_c *port = (struct port_c *)base;
 	struct port_c_entry *pe = port->first;
-	if (pe == NULL)
+	if (pe == NULL) {
+		TRASH(port);
 		return;
+	}
 	port_c_destroy_entry(pe);
 	/*
 	 * Port->first is skipped, it is pointing at
@@ -82,6 +84,7 @@ port_c_destroy(struct port *base)
 		port_c_destroy_entry(cur);
 		mempool_free(&port_entry_pool, cur);
 	}
+	TRASH(port);
 }
 
 static inline struct port_c_entry *
