@@ -351,6 +351,18 @@ tuple_format_new(struct tuple_format_vtab *vtab, void *engine,
 		 bool is_reusable);
 
 /**
+ * Simple form of @sa tuple_format_create without the most of arguments.
+ * Omitted arguments are treated as 0/NULL/false depending on type.
+ */
+static inline struct tuple_format *
+simple_tuple_format_new(struct tuple_format_vtab *vtab, void *engine,
+			struct key_def * const *keys, uint16_t key_count)
+{
+	return tuple_format_new(vtab, engine, keys, key_count,
+				NULL, 0, 0, NULL, false, false);
+}
+
+/**
  * Check, if @a format1 can store any tuples of @a format2. For
  * example, if a field is not nullable in format1 and the same
  * field is nullable in format2, or the field type is integer
