@@ -29,6 +29,24 @@ local LUA_TEMPLATES = { '?.lua', '?/init.lua' }
 local ROCKS_LIB_TEMPLATES = { ROCKS_LIB_PATH .. '/?.'..soext }
 local ROCKS_LUA_TEMPLATES = { ROCKS_LUA_PATH .. '/?.lua', ROCKS_LUA_PATH .. '/?/init.lua' }
 
+get_stack = function()
+    local info = debug.getinfo(1)
+    local stack = {}
+    local i = 1
+    while info ~= nil do
+        stack[i] = info
+        i = i + 1
+        info = debug.getinfo(i)
+    end
+    return stack
+end
+
+print_stack = function(stack)
+    for k, v in pairs(stack) do
+        print(v.short_src, ":", v.linedefined)
+    end
+end
+
 old_require = require
 local function remove_root_directory(path)
     local cur_dir = os.getenv("PWD") .. '/'
@@ -72,18 +90,42 @@ local function module_name_by_func(func_level)
     local debug = debug or old_require('debug')
     local src_name = debug.getinfo(func_level + 1).source
     src_name = src_name:sub(2)
+    print("result module name = ", src_name)
+    --local second_name, value = debug.getlocal(3, 1)
+    --print("second mod name = ", second_name, value)
+    --second_name, value = debug.getlocal(3, 2)
+    --print("second mod name = ", second_name, value)
+    --for k, v in pairs(debug.getinfo(func_level + 2)) do
+    --    print(k, v)
+    --end
     return module_name_form_filename(src_name)
 end
 
 require = function(modname)
+    print('modname require 1 = ', modname)
+    local debug = debug or old_require('debug')
     if modname == 'log' then
+        print('require log')
         local log = old_require(modname)
+        print('set module name')
         log.new(module_name_by_func(2))
+        local stack1 = get_stack()
+        print('stack1')
+        print_stack(stack1)
+        local stack2 = debug.traceback()
+        print('stack2 = ', stack2)
+        print('log.internal')
+        print_stack(log.internal)
         return log
     end
+    if modname == 'log.internal' then
+        return debug.traceback()
+    end
+    print('stack in our require')
+    print_stack(get_stack())
+    print(debug.traceback())
     return old_require(modname)
 end
-
 
 local package_searchroot
 

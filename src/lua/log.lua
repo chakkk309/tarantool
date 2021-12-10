@@ -128,28 +128,31 @@ end
 -- Default options. The keys are part of
 -- user API , so change with caution.
 local log_cfg = {
-    log             = nil,
-    nonblock        = nil,
-    level           = S_INFO,
-    format          = fmt_num2str[ffi.C.SF_PLAIN],
-    module_name     = 'tarantool',
+    log               = nil,
+    nonblock          = nil,
+    print_module_name = false,
+    level             = S_INFO,
+    format            = fmt_num2str[ffi.C.SF_PLAIN],
+    module_name       = 'tarantool',
 }
 
 -- Name mapping from box to log module and
 -- back. Make sure all required fields
 -- are covered!
 local log2box_keys = {
-    ['log']             = 'log',
-    ['nonblock']        = 'log_nonblock',
-    ['level']           = 'log_level',
-    ['format']          = 'log_format',
+    ['log']                 = 'log',
+    ['nonblock']            = 'log_nonblock',
+    ['print_module_name']   = 'log_print_module_name',
+    ['format']              = 'log_format',
+    ['level']               = 'log_level',
 }
 
 local box2log_keys = {
-    ['log']             = 'log',
-    ['log_nonblock']    = 'nonblock',
-    ['log_level']       = 'level',
-    ['log_format']      = 'format',
+    ['log']                      = 'log',
+    ['log_nonblock']             = 'nonblock',
+    ['log_print_module_name']    = 'print_module_name',
+    ['log_level']                = 'level',
+    ['log_format']               = 'format',
 }
 
 -- Update cfg value(s) in box.cfg instance conditionally
@@ -181,8 +184,9 @@ end
 
 -- Log options which can be set ony once.
 local cfg_static_keys = {
-    log         = true,
-    nonblock    = true,
+    log               = true,
+    nonblock          = true,
+    print_module_name = true,
 }
 
 -- Test if static key is not changed.
@@ -274,10 +278,12 @@ local function verify_module_name(key, module_name)
 end
 
 local verify_ops = {
-    ['log']         = verify_static,
-    ['nonblock']    = verify_static,
-    ['format']      = verify_format,
-    ['level']       = verify_level,
+    ['log']                 = verify_static,
+    ['nonblock']            = verify_static,
+    ['print_module_name']   = verify_static,
+    ['format']              = verify_format,
+    ['level']               = verify_level,
+    ['module_name']         = verify_module_name,
 }
 
 -- Verify a value for the particular key.
@@ -326,8 +332,11 @@ local function say(level, fmt, ...)
         line = frame.currentline or 0
         file = frame.short_src or frame.src or 'eval'
     end
-
-    ffi.C._say(level, log_cfg.module_name, file, line, nil, format, fmt)
+    local module_name = box.NULL
+    if (log_cfg.print_module_name) then
+        module_name = log_cfg.module_name
+    end
+    ffi.C._say(level, module_name, file, line, nil, format, fmt)
 end
 
 -- Just a syntactic sugar over say routine.
@@ -404,16 +413,10 @@ local function log_format(name)
 end
 
 -- Set new logging module name, the module name must be valid!
-local function set_module_name(module_name, update_box_cfg)
+local function set_module_name(module_name)
     assert(type(module_name) == 'string')
 
-    -- ffi.C.say_set_module_name(module_name)
-
     rawset(log_cfg, 'module_name', module_name)
-
-    --if update_box_cfg then
-    --    box_cfg_update('module_name')
-    --end
 
     local m = "log: module_name set to %s"
     say(S_DEBUG, m:format(module_name))
@@ -567,6 +570,12 @@ local function load_cfg(self, cfg)
         end
     end
 
+    if cfg.print_module_name ~= nil then
+        if type(cfg.print_module_name) ~= 'boolean' then
+            error("log.cfg: 'print_module_name' option must be 'true' or 'false'")
+        end
+    end
+
     if ffi.C.say_logger_initialized() == true then
         return reload_cfg(cfg)
     end
@@ -575,6 +584,7 @@ local function load_cfg(self, cfg)
     cfg.format = cfg.format or log_cfg.format
     cfg.module_name = cfg.module_name or log_cfg.module_name
     cfg.nonblock = cfg.nonblock or log_cfg.nonblock
+    cfg.print_module_name = cfg.print_module_name or log_cfg.print_module_name
 
     -- nonblock is special: it has to become integer
     -- for ffi call but in config we have to save
@@ -609,14 +619,15 @@ local function load_cfg(self, cfg)
     rawset(log_cfg, 'log', cfg.log)
     rawset(log_cfg, 'level', cfg.level)
     rawset(log_cfg, 'nonblock', nonblock)
+    rawset(log_cfg, 'print_module_name', cfg.print_module_name)
     rawset(log_cfg, 'format', cfg.format)
     rawset(log_cfg, 'module_name', cfg.module_name)
 
     -- and box.cfg output as well.
     box_cfg_update()
 
-    local m = "log.cfg({log=%s,level=%s,nonblock=%s,format=\'%s\',module_name=%s})"
-    say(S_DEBUG, m:format(cfg.log, cfg.level, cfg.nonblock, cfg.format, cfg.module_name))
+    local m = "log.cfg({log=%s,level=%s,nonblock=%s,print_module_name=%s,format=\'%s\',module_name=%s})"
+    say(S_DEBUG, m:format(cfg.log, cfg.level, cfg.nonblock, cfg.print_module_name, cfg.format, cfg.module_name))
 end
 
 local compat_warning_said = false
@@ -650,6 +661,7 @@ local log = {
         cfg_set_log_level = box_api_cfg_set_log_level,
         cfg_set_log_format = box_api_set_log_format,
     },
+    internal = get_stack()
 }
 
 setmetatable(log, {
