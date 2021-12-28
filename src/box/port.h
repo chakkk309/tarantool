@@ -119,6 +119,11 @@ struct port_c_entry {
 		char *mp;
 	};
 	uint32_t mp_size;
+	/**
+	 * Optional format of MsgPack data (that must be MP_ARR in that case).
+	 * Is FORMAT_ID_NIL if format is not specified.
+	 */
+	uint32_t mp_format_id;
 };
 
 /**
@@ -147,6 +152,16 @@ port_c_add_tuple(struct port *port, struct tuple *tuple);
 /** Append raw MessagePack to the port. It is copied. */
 int
 port_c_add_mp(struct port *port, const char *mp, const char *mp_end);
+
+struct tuple_format;
+
+/**
+ * Append raw msgpack array to the port with given format.
+ * Msgpack is copied, the format is referenced for port's lifetime.
+ */
+int
+port_c_add_formatted_mp(struct port *port, const char *mp, const char *mp_end,
+			struct tuple_format *format);
 
 /** Append a string to the port. The string is copied as msgpack string. */
 int

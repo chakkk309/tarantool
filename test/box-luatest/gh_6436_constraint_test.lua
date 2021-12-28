@@ -547,14 +547,18 @@ g.test_tuple_constraint_basics = function(cg)
     cg.server:exec(function(engine)
         local constr_tuple_body1 = "function(tuple, name) " ..
             "if name ~= 'tuple_constr1' then error('wrong name!') end " ..
-            "return tuple[1] + tuple[2] < 100 end"
+            "if tuple[1] ~= tuple.id1 then error('wrong format!') end " ..
+            "if tuple[2] ~= tuple.id2 then error('wrong format!') end " ..
+            "return tuple[1] + tuple.id2 < 100 end"
 
         local function func_opts(body)
             return {language = 'LUA', is_deterministic = true, body = body}
         end
         box.schema.func.create('tuple_constr1', func_opts(constr_tuple_body1))
 
+        local fmt = {'id1', 'id2', 'id3'}
         local s = box.schema.create_space('test', {engine=engine,
+                                                   format=fmt,
                                                    constraint='tuple_constr1'})
         s:create_index('pk')
         box.schema.user.grant('guest', 'read,write', 'space', 'test')
@@ -797,7 +801,7 @@ g.test_several_tuple_constraints = function(cg)
             "return tuple[1] + tuple[2] < 100 end"
         local constr_tuple_body2 = "function(tuple, name) " ..
             "if name ~= 'check2' then error('wrong name!') end " ..
-            "if tuple[2] + tuple[3] > 100 then error('wtf!') end return true end"
+            "if tuple.id2 + tuple.id3 > 100 then error('wtf!') end return true end"
 
         local function func_opts(body)
             return {language = 'LUA', is_deterministic = true, body = body}
@@ -805,8 +809,10 @@ g.test_several_tuple_constraints = function(cg)
         box.schema.func.create('tuple_constr1', func_opts(constr_tuple_body1))
         box.schema.func.create('tuple_constr2', func_opts(constr_tuple_body2))
 
+        local fmt = {'id1', 'id2', 'id3'}
         local constr = {check1='tuple_constr1',check2='tuple_constr2'}
         local s = box.schema.create_space('test', {engine=engine,
+                                                   format=fmt,
                                                    constraint=constr})
         s:create_index('pk')
         box.schema.user.grant('guest', 'read,write', 'space', 'test')

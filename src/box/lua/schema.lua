@@ -90,6 +90,7 @@ ffi.cdef[[
             char *mp;
         };
         uint32_t mp_size;
+        uint32_t mp_format_id;
     };
 
     struct port_c {

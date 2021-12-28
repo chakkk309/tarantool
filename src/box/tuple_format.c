@@ -946,7 +946,7 @@ tuple_field_check_constraint(const struct tuple_field *field,
 }
 
 static int
-tuple_check_constraint(const struct tuple_format *format, const char *mp_data)
+tuple_check_constraint(struct tuple_format *format, const char *mp_data)
 {
 	if (format->constraint_count == 0)
 		return 0;
