@@ -134,14 +134,11 @@ space_cache_repin_pinned(struct space *old_space, struct space *new_space)
 {
 	assert(new_space != NULL);
 	assert(rlist_empty(&new_space->space_cache_pin_list));
-	assert(new_space->pin_by_name_count == 0);
 	if (old_space == NULL)
 		return;
 
 	rlist_swap(&new_space->space_cache_pin_list,
 		   &old_space->space_cache_pin_list);
-	SWAP(new_space->pin_by_name_count,
-	     old_space->pin_by_name_count);
 
 	struct space_cache_holder *h;
 	rlist_foreach_entry(h, &new_space->space_cache_pin_list, link) {
@@ -225,7 +222,6 @@ space_cache_replace(struct space *old_space, struct space *new_space)
 		(void)old_space_by_name;
 		mh_strnptr_del(spaces_by_name, k, NULL);
 		assert(rlist_empty(&old_space->space_cache_pin_list));
-		assert(old_space->pin_by_name_count == 0);
 	}
 	space_cache_version++;
 

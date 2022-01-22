@@ -50,6 +50,7 @@
 #include "constraint_id.h"
 #include "tuple_constraint.h"
 #include "tuple_constraint_func.h"
+#include "tuple_constraint_fkey.h"
 
 int
 access_check_space(struct space *space, user_access_t access)
@@ -146,8 +147,16 @@ space_prepare_tuple_format(struct space *space)
 			struct tuple_constraint *constr = &field->constraint[j];
 			if (constr->check != tuple_constraint_noop_check)
 				continue;
-			if (tuple_constraint_func_init(constr, space) != 0)
-				return -1;
+			if (constr->def.type == CONSTR_FUNC) {
+				if (tuple_constraint_func_init(constr,
+							       space) != 0)
+					return -1;
+			} else {
+				assert(constr->def.type == CONSTR_FKEY);
+				if (tuple_constraint_fkey_init(constr,
+							       space, i) != 0)
+					return -1;
+			}
 		}
 	}
 	return 0;
@@ -272,7 +281,6 @@ space_create(struct space *space, struct engine *engine,
 	}
 	space->constraint_ids = mh_strnptr_new();
 	rlist_create(&space->space_cache_pin_list);
-	space->pin_by_name_count = 0;
 	rlist_create(&space->memtx_stories);
 	return 0;
 
@@ -353,7 +361,6 @@ space_delete(struct space *space)
 	assert(rlist_empty(&space->child_fk_constraint));
 	assert(rlist_empty(&space->ck_constraint));
 	assert(rlist_empty(&space->space_cache_pin_list));
-	assert(space->pin_by_name_count == 0);
 	space->vtab->destroy(space);
 }
 
@@ -411,8 +418,8 @@ index_name_by_id(struct space *space, uint32_t id)
 }
 
 /**
- * Run BEFORE triggers registered for a space. If a trigger
- * changes the current statement, this function updates the
+ * Run BEFORE triggers and foreign key constraint checks registered for a space.
+ * If a trigger changes the current statement, this function updates the
  * request accordingly.
  */
 static int
@@ -462,6 +469,23 @@ space_before_replace(struct space *space, struct txn *txn,
 
 	if (index_get(index, key, part_count, &old_tuple) != 0)
 		return -1;
+
+	if (old_tuple != NULL) {
+		/*
+		 * Before deletion we must check that there are now tuples
+		 * in other spaces that refer to this tuple via foreign key
+		 * constraint.
+		 */
+		struct space_cache_holder *h;
+		rlist_foreach_entry(h, &space->space_cache_pin_list, link) {
+			struct tuple_constraint *constr =
+				container_of(h, struct tuple_constraint,
+					     space_cache_holder);
+			if (tuple_constraint_fkey_check_delete(constr,
+							       old_tuple) != 0)
+				return -1;
+		}
+	}
 
 after_old_tuple_lookup:;
 
@@ -616,8 +640,12 @@ space_execute_dml(struct space *space, struct txn *txn,
 			return -1;
 	}
 
-	if (unlikely(!rlist_empty(&space->before_replace) &&
-		     space->run_triggers)) {
+	/* Any operation except insert can remove old tuple. */
+	bool can_remove_old_tuple = request->type != IPROTO_INSERT;
+	if (unlikely((!rlist_empty(&space->before_replace) &&
+		      space->run_triggers) ||
+		     (!rlist_empty(&space->space_cache_pin_list) &&
+		      can_remove_old_tuple))) {
 		/*
 		 * Call BEFORE triggers if any before dispatching
 		 * the request. Note, it may change the request
