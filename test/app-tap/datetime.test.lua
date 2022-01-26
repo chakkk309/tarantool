@@ -11,7 +11,7 @@ local ffi = require('ffi')
 --]]
 if jit.arch == 'arm64' then jit.off() end
 
-test:plan(29)
+test:plan(30)
 
 -- minimum supported date - -5879610-06-22
 local MIN_DATE_YEAR = -5879610
@@ -96,17 +96,16 @@ local function invalid_date_fmt_error(str)
     return ('invalid date format %s'):format(str)
 end
 
--- utility functions to gracefully handle pcall errors
 local function assert_raises(test, error_msg, func, ...)
     local ok, err = pcall(func, ...)
-    local err_tail = err:gsub("^.+:%d+: ", "")
+    local err_tail = err and err:gsub("^.+:%d+: ", "") or ''
     return test:is(not ok and err_tail, error_msg,
                    ('"%s" received, "%s" expected'):format(err_tail, error_msg))
 end
 
 local function assert_raises_like(test, error_msg, func, ...)
     local ok, err = pcall(func, ...)
-    local err_tail = err:gsub("^.+:%d+: ", "")
+    local err_tail = err and err:gsub("^.+:%d+: ", "") or ''
     return test:like(not ok and err_tail, error_msg,
                    ('"%s" received, "%s" expected'):format(err_tail, error_msg))
 end
@@ -473,6 +472,55 @@ test:test("Multiple tests for parser (with nanoseconds)", function(test)
             test:is(str, tostring(dt), ('%s == tostring(%s)'):
                     format(str, tostring(dt)))
         end
+    end
+end)
+
+local function create_date_string(date)
+    local year, month, day = date.year or 1970, date.month or 1, date.day or 1
+    local hour, min, sec = date.hour or 0, date.min or 0, date.sec or 0
+    return ('%04d-%02d-%02dT%02d:%02d:%02dZ'):format(year, month, day, hour, min, sec)
+end
+
+local function couldnt_parse(txt)
+    return ("could not parse '%s'"):format(txt)
+end
+
+test:test("Check parsing of dates with invalid attributes", function(test)
+    test:plan(32)
+
+    local boundary_checks = {
+        {'month', {1, 12}},
+        {'day', {1, 31, -1}},
+        {'hour', {0, 23}},
+        {'min', {0, 59}},
+        {'sec', {0, 59}},
+        -- {'usec', {0, 1e6}},
+        -- {'msec', {0, 1e3}},
+        -- {'nsec', {0, 1e9}},
+    }
+    for _, row in pairs(boundary_checks) do
+        local attr_name, bounds = unpack(row)
+        local left, right = unpack(bounds)
+        local txt = create_date_string{[attr_name] = left}
+        local dt, len = date.parse(txt)
+        test:ok(dt ~= nil, dt)
+        test:ok(len == #txt, len)
+        local txt = create_date_string{[attr_name] = right}
+        dt, len = date.parse(txt)
+        test:ok(dt ~= nil, dt)
+        test:ok(len == #txt, len)
+        -- expected error
+        if left > 0 then
+            txt = create_date_string{[attr_name] = left - 1}
+            assert_raises(test, couldnt_parse(txt),
+                          function() dt, len = date.parse(txt) end)
+        end
+        txt = create_date_string{[attr_name] = right + 2}
+        assert_raises(test, couldnt_parse(txt),
+                      function() dt, len = date.parse(txt) end)
+        txt = create_date_string{[attr_name] = right + 50}
+        assert_raises(test, couldnt_parse(txt),
+                      function() dt, len = date.parse(txt) end)
     end
 end)
 
@@ -1226,7 +1274,7 @@ test:test("Matrix of allowed time and interval subtractions", function(test)
 end)
 
 test:test("Parse iso8601 date - valid strings", function(test)
-    test:plan(32)
+    test:plan(54)
     local good = {
         {2012, 12, 24, "20121224",                   8 },
         {2012, 12, 24, "20121224  Foo bar",          8 },
@@ -1244,6 +1292,17 @@ test:test("Parse iso8601 date - valid strings", function(test)
         {   1,  1,  1, "0001-W01-1",                10 },
         {   1,  1,  1, "0001-01-01",                10 },
         {   1,  1,  1, "0001-001",                   8 },
+        {9999, 12, 31, "9999-12-31",                10 },
+        {   0,  1,  1, "0000-Q1-01",                10 },
+        {   0,  1,  3, "0000-W01-1",                10 },
+        {   0,  1,  1, "0000-01-01",                10 },
+        {   0,  1,  1, "0000-001",                   8 },
+        {-200, 12, 31, "-200-12-31",                10 },
+        {-1000,12, 31, "-1000-12-31",               11 },
+        {-10000,12,31, "-10000-12-31",              12 },
+        {-5879610,6,22,"-5879610-06-22",            14 },
+        {10000, 1,  1, "10000-01-01",               11 },
+        {5879611,7, 1, "5879611-07-01",             13 },
     }
 
     for _, value in ipairs(good) do
@@ -1258,7 +1317,7 @@ test:test("Parse iso8601 date - valid strings", function(test)
 end)
 
 test:test("Parse iso8601 date - invalid strings", function(test)
-    test:plan(31)
+    test:plan(29)
     local bad = {
         "20121232"   , -- Invalid day of month
         "2012-12-310", -- Invalid day of month
@@ -1287,10 +1346,8 @@ test:test("Parse iso8601 date - invalid strings", function(test)
         "2012U1234"  , -- Invalid
         "2012-1234"  , -- Invalid
         "2012-X1234" , -- Invalid
-        "0000-Q1-01" , -- Year less than 0001
-        "0000-W01-1" , -- Year less than 0001
-        "0000-01-01" , -- Year less than 0001
-        "0000-001"   , -- Year less than 0001
+        "-5879611-01-01",  -- Year less than 5879610-06-22
+        "5879612-01-01",  -- Year greater than 5879611-07-11
     }
 
     for _, str in ipairs(bad) do
