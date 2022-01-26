@@ -11,7 +11,7 @@ local ffi = require('ffi')
 --]]
 if jit.arch == 'arm64' then jit.off() end
 
-test:plan(30)
+test:plan(31)
 
 -- minimum supported date - -5879610-06-22
 local MIN_DATE_YEAR = -5879610
@@ -480,6 +480,28 @@ local function create_date_string(date)
     local hour, min, sec = date.hour or 0, date.min or 0, date.sec or 0
     return ('%04d-%02d-%02dT%02d:%02d:%02dZ'):format(year, month, day, hour, min, sec)
 end
+
+test:test("Check parsing of full supported years range", function(test)
+    test:plan(63)
+    local valid_years = {
+        -5879610, -5879000, -5800000, -2e6, -1e5, -1e4, -9999, -2000, -1000,
+        0, 1, 1000, 1900, 1970, 2000, 9999,
+        1e4, 1e6, 2e6, 5e6, 5879611
+    }
+    local fmt = '%FT%T%z'
+    for _, y in ipairs(valid_years) do
+        local txt = ('%04d-06-22'):format(y)
+        local dt = date.parse(txt)
+        test:isnt(dt, nil, dt)
+        local out_txt = tostring(dt)
+        local out_dt = date.parse(out_txt)
+        test:is(dt, out_dt, ('default parse of %s (%s == %s)'):
+                            format(out_txt, dt, out_dt))
+        local fmt_dt = date.parse(out_txt, {format = fmt})
+        test:is(dt, fmt_dt, ('parse via format %s (%s == %s)'):
+                            format(fmt, dt, fmt_dt))
+    end
+end)
 
 local function couldnt_parse(txt)
     return ("could not parse '%s'"):format(txt)
