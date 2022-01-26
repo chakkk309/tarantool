@@ -195,30 +195,37 @@ datetime_parse_full(struct datetime *date, const char *str, size_t len,
 	n = dt_parse_iso_date(str, len, &dt);
 	if (n == 0)
 		return 0;
-	if (n == len)
-		goto exit;
-
-	c = str[n++];
-	if (c != 'T' && c != 't' && c != ' ')
-		return 0;
 
 	str += n;
 	len -= n;
+	if (len <= 0)
+		goto exit;
+
+	c = *str++;
+	if (c != 'T' && c != 't' && c != ' ')
+		return 0;
+	len--;
+	if (len <= 0)
+		goto exit;
 
 	n = dt_parse_iso_time(str, len, &sec_of_day, &nanosecond);
 	if (n == 0)
 		return 0;
-	if (n == len)
-		goto exit;
-
-	if (str[n] == ' ')
-		n++;
 
 	str += n;
 	len -= n;
+	if (len <= 0)
+		goto exit;
+
+	if (*str == ' ') {
+		str++;
+		len--;
+	}
+	if (len <= 0)
+		goto exit;
 
 	n = dt_parse_iso_zone_lenient(str, len, &offset);
-	if (n == 0 || n != len)
+	if (n == 0)
 		return 0;
 	str += n;
 
