@@ -506,6 +506,9 @@ space_is_memtx(struct space *space) { return space->engine->id == 0; }
 static inline bool
 space_is_vinyl(struct space *space) { return strcmp(space->engine->name, "vinyl") == 0; }
 
+bool
+space_is_system(struct space *space);
+
 struct field_def;
 /**
  * Allocate and initialize a space.

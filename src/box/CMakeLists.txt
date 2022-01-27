@@ -161,6 +161,7 @@ set(box_sources
     vy_quota.c
     request.c
     space.c
+    space_cache.c
     space_def.c
     sequence.c
     ck_constraint.c

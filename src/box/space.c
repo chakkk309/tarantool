@@ -116,6 +116,13 @@ space_fill_index_map(struct space *space)
 	}
 }
 
+bool
+space_is_system(struct space *space)
+{
+	return space->def->id > BOX_SYSTEM_ID_MIN &&
+	       space->def->id < BOX_SYSTEM_ID_MAX;
+}
+
 /**
  * Prepare tuple format to have @a space->def specific format checks.
  * Can return nonzero in case of error (diag is set).
