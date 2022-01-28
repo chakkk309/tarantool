@@ -237,7 +237,7 @@ exit:
 	date->tzoffset = offset;
 	date->tzindex = 0;
 
-	return (str - svp);
+	return str - svp;
 }
 
 int
