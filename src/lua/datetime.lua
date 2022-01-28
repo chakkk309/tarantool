@@ -894,7 +894,7 @@ end
     which has been accepted by parser.
 ]]
 local function datetime_parse_date(str)
-    check_str(str, "datetime.parse_date()")
+    check_str(str, 'datetime.parse_date()')
     local dt = ffi.new('dt_t[1]')
     local len = tonumber(builtin.tnt_dt_parse_iso_date(str, #str, dt))
     if len == 0 then
@@ -910,7 +910,7 @@ end
     Returns constructed datetime object and length of accepted string.
 ]]
 local function datetime_parse_full(str, tzoffset)
-    check_str(str, "datetime.parse()")
+    check_str(str, 'datetime.parse()')
     local date = ffi.new(datetime_t)
     local len = builtin.tnt_datetime_parse_full(date, str, #str, tzoffset)
     if len == 0 then
@@ -933,16 +933,16 @@ local function datetime_parse_format(str, fmt)
 end
 
 local function datetime_parse_from(str, obj)
-    check_str(str, "datetime.parse()")
+    check_str(str, 'datetime.parse()')
     local fmt = ''
     local offset
 
     if obj ~= nil then
-        check_table(obj, "datetime.parse()")
+        check_table(obj, 'datetime.parse()')
         fmt = obj.format
         offset = obj.tzoffset
     end
-    check_str_or_nil(fmt, "datetime.parse()")
+    check_str_or_nil(fmt, 'datetime.parse()')
 
     if offset ~= nil then
         offset = get_timezone(offset, 'tzoffset')
