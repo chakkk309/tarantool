@@ -224,7 +224,13 @@ lbox_push_space_constraint(struct lua_State *L, struct space *space, int i)
 {
 	assert(i >= 0);
 	struct tuple_format *fmt = space->format;
-	if (fmt->constraint_count == 0) {
+	uint32_t constraint_count = 0;
+	for (size_t k = 0; k < fmt->constraint_count; k++) {
+		struct tuple_constraint *c = &fmt->constraint[k];
+		if (c->def.type == CONSTR_FUNC)
+			constraint_count++;
+	}
+	if (constraint_count == 0) {
 		/* No constraints - no field. */
 		lua_pushnil(L);
 		lua_setfield(L, i, "constraint");
@@ -251,13 +257,15 @@ lbox_push_space_constraint(struct lua_State *L, struct space *space, int i)
 	 * We have to check it for correctness and then pop it.
 	 */
 	bool is_correct = false;
-	assert(fmt->constraint_count != 0);
+	assert(constraint_count != 0);
 	assert(lua_istable(L, -1) || has_constraint_count == 0);
-	if (has_constraint_count == fmt->constraint_count) {
+	if (has_constraint_count == constraint_count) {
 		assert(lua_istable(L, -1));
 		is_correct = true;
 		for (size_t k = 0; k < fmt->constraint_count; k++) {
 			struct tuple_constraint *c = &fmt->constraint[k];
+			if (c->def.type != CONSTR_FUNC)
+				continue;
 			lua_getfield(L, -1, c->def.name); /* Push constraint. */
 			if (!lua_isnumber(L, -1)) {
 				is_correct = false;
@@ -279,10 +287,205 @@ lbox_push_space_constraint(struct lua_State *L, struct space *space, int i)
 	/* At last, (re)create the table. */
 	lua_newtable(L);
 	for (size_t k = 0; k < fmt->constraint_count; k++) {
+		if (fmt->constraint[k].def.type != CONSTR_FUNC)
+			continue;
 		lua_pushnumber(L, fmt->constraint[k].def.func.id);
 		lua_setfield(L, -2, fmt->constraint[k].def.name);
 	}
 	lua_setfield(L, i, "constraint");
+}
+
+/**
+ * Helper function of lbox_push_space_foreign_key.
+ * Push a value @a def to the top of lua stack @a L.
+ */
+static void
+lbox_push_id_or_name(struct lua_State *L,
+		     struct tuple_constraint_id_or_name_def *def)
+{
+	if (def->name_len == 0)
+		lua_pushnumber(L, def->id);
+	else
+		lua_pushstring(L, def->name);
+}
+
+/**
+ * Helper function of lbox_push_space_foreign_key.
+ * Compare value on the top of lua stack @a L with value @a def.
+ * Return 0 if and only if they are equal.
+ */
+static int
+lbox_compare_id_or_name(struct lua_State *L,
+			const struct tuple_constraint_id_or_name_def *def)
+{
+	if (def->name_len == 0) {
+		if (!lua_isnumber(L, -1))
+			return -1;
+		double val = lua_tonumber(L, -1);
+		return val < def->id ? -1 : val > def->id;
+	} else {
+		if (!lua_isstring(L, -1))
+			return 1;
+		size_t len;
+		const char *val = lua_tolstring(L, -1, &len);
+		if (len != def->name_len)
+			return len < def->name_len ? -1 : 1;
+		return memcmp(val, def->name, len);
+	}
+}
+
+/**
+ * Helper function of lbox_push_space_foreign_key.
+ * Check whether lua object on the top of lua stack @a L is equal to foreign
+ * key definition of given definition @a fkey.
+ */
+static bool
+lbox_check_foreign_key(struct lua_State *L,
+		       struct tuple_constraint_fkey_def *fkey)
+{
+	if (!lua_istable(L, -1))
+		return false;
+
+	/* Check 'space'. */
+	lua_getfield(L, -1, "space"); /* Push 'space'. */
+	if (!lua_isnumber(L, -1))
+		return false;
+	double space = lua_tonumber(L, -1);
+	if (space != fkey->space_id)
+		return false;
+	lua_pop(L, 1); /* Pop 'space'. */
+
+	/* Check 'field'. */
+	lua_getfield(L, -1, "field"); /* Push 'field'. */
+	if (!lua_istable(L, -1)) {
+		lua_pop(L, 1); /* Pop 'field'. */
+		return false;
+	}
+	/* Traverse and count field. */
+	uint32_t field_count = 0;
+	lua_pushnil(L);
+	while (lua_next(L, -2) != 0) {
+		field_count++;
+		lua_pop(L, 1);
+	}
+	if (field_count != fkey->field_mapping_size) {
+		lua_pop(L, 1); /* Pop 'field'. */
+		return false;
+	}
+	/* Check field list. */
+	for (uint32_t j = 0; j < fkey->field_mapping_size; j++) {
+		struct tuple_constraint_fkey_field_mapping *m =
+			&fkey->field_mapping[j];
+		lbox_push_id_or_name(L, &m->local_field);
+		lua_gettable(L, -2); /* Push foreign field. */
+		if (lbox_compare_id_or_name(L, &m->foreign_field) != 0) {
+			lua_pop(L, 1); /* Pop foreign field. */
+			lua_pop(L, 1); /* Pop 'field'. */
+			return false;
+		}
+		lua_pop(L, 1); /* Pop foreign field. */
+	}
+	lua_pop(L, 1); /* Pop 'field'. */
+	return true;
+}
+
+/**
+ * Helper function of lbox_push_space_foreign_key.
+ * Check whether lua object on the top of lua stack @a L is equal to foreign
+ * keys definition of given @a space.
+ */
+static bool
+lbox_check_foreign_keys(struct lua_State *L, struct space *space)
+{
+	if (!lua_istable(L, -1))
+		return false;
+	struct tuple_format *fmt = space->format;
+
+	/* Check each constraint in format. */
+	size_t foreign_key_count = 0;
+	for (size_t k = 0; k < fmt->constraint_count; k++) {
+		struct tuple_constraint *constr = &fmt->constraint[k];
+		if (constr->def.type != CONSTR_FKEY)
+			continue;
+		foreign_key_count++;
+		lua_getfield(L, -1, constr->def.name); /* Push foreign key. */
+		struct tuple_constraint_fkey_def *fkey = &constr->def.fkey;
+		if (lbox_check_foreign_key(L, fkey) != 0) {
+			lua_pop(L, 1); /* Pop foreign key. */
+			return false;
+		}
+		lua_pop(L, 1); /* Pop foreign key. */
+	}
+
+	/* Count foreign keys in lua table, there could be excess fields. */
+	size_t has_foreign_key_count = 0;
+	lua_pushnil(L);
+	while (lua_next(L, -2) != 0) {
+		has_foreign_key_count++;
+		lua_pop(L, 1);
+	}
+
+	return foreign_key_count == has_foreign_key_count;
+}
+
+/**
+ * Verify and/or create foreign key_field in lua space object, given by index
+ * i in lua stack. Be polite if possible - don't create anything if it is
+ * correct already.
+ * If the space has no foreign keys, there will be not key_field field.
+ */
+static void
+lbox_push_space_foreign_key(struct lua_State *L, struct space *space, int i)
+{
+	assert(i >= 0);
+	struct tuple_format *fmt = space->format;
+	uint32_t foreign_key_count = 0;
+	for (size_t k = 0; k < fmt->constraint_count; k++) {
+		struct tuple_constraint *c = &fmt->constraint[k];
+		if (c->def.type == CONSTR_FKEY)
+			foreign_key_count++;
+	}
+	if (foreign_key_count == 0) {
+		/* No foreign keys - no field. */
+		lua_pushnil(L);
+		lua_setfield(L, i, "foreign_key");
+		return;
+	}
+
+	/*
+	 * There some foreign_keys, but we should check that there's already a
+	 * correct foreign_key table in space object.
+	 */
+	lua_getfield(L, i, "foreign_key"); /* Push 'foreign_key'. */
+	if (lbox_check_foreign_keys(L, space)) {
+		/* Already correct, nothing to do. */
+		lua_pop(L, 1); /* Pop 'foreign_key'. */
+		return;
+	}
+	lua_pop(L, 1); /* Pop foreign_key. */
+
+	/* At last, (re)create the table. */
+	lua_newtable(L);
+	for (size_t k = 0; k < fmt->constraint_count; k++) {
+		struct tuple_constraint *c = &fmt->constraint[k];
+		if (c->def.type != CONSTR_FKEY)
+			continue;
+
+		lua_newtable(L);
+		lua_pushnumber(L, c->def.fkey.space_id);
+		lua_setfield(L, -2, "space");
+		lua_newtable(L);
+		for (uint32_t j = 0; j < c->def.fkey.field_mapping_size; j++) {
+			struct tuple_constraint_fkey_field_mapping *m =
+				&c->def.fkey.field_mapping[j];
+			lbox_push_id_or_name(L, &m->local_field);
+			lbox_push_id_or_name(L, &m->foreign_field);
+			lua_settable(L, -3);
+		}
+		lua_setfield(L, -2, "field");
+		lua_setfield(L, -2, fmt->constraint[k].def.name);
+	}
+	lua_setfield(L, i, "foreign_key");
 }
 
 /**
@@ -519,6 +722,7 @@ lbox_fillspace(struct lua_State *L, struct space *space, int i)
 
 	lbox_push_ck_constraint(L, space, i);
 	lbox_push_space_constraint(L, space, i);
+	lbox_push_space_foreign_key(L, space, i);
 
 	lua_getfield(L, LUA_GLOBALSINDEX, "box");
 	lua_pushstring(L, "schema");

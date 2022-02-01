@@ -35,7 +35,23 @@ tuple_constraint_def_cmp_fkey(const struct tuple_constraint_fkey_def *def1,
 {
 	if (def1->space_id != def2->space_id)
 		return def1->space_id < def2->space_id ? -1 : 1;
-	return id_or_name_def_cmp(&def1->field, &def2->field);
+	if (def1->field_mapping_size != def2->field_mapping_size)
+		return def1->field_mapping_size < def2->field_mapping_size ? -1 : 1;
+	if (def1->field_mapping_size == 0)
+		return id_or_name_def_cmp(&def1->field, &def2->field);
+
+	for (uint32_t i = 0; i < def1->field_mapping_size; i++) {
+		int rc;
+		rc = id_or_name_def_cmp(&def1->field_mapping[i].local_field,
+					&def2->field_mapping[i].local_field);
+		if (rc != 0)
+			return rc;
+		rc = id_or_name_def_cmp(&def1->field_mapping[i].foreign_field,
+					&def2->field_mapping[i].foreign_field);
+		if (rc != 0)
+			return rc;
+	}
+	return 0;
 }
 
 int
@@ -70,6 +86,22 @@ id_or_name_def_hash_process(const struct tuple_constraint_id_or_name_def *def,
 	return sizeof(def->id) + sizeof(def->name_len) + def->name_len;
 }
 
+static uint32_t
+field_mapping_hash_process(const struct tuple_constraint_fkey_def *def,
+			   uint32_t *ph, uint32_t *pcarry)
+{
+	uint32_t bytes = 0;
+	for (uint32_t i = 0; i < def->field_mapping_size; i++) {
+		struct tuple_constraint_fkey_field_mapping *m =
+			&def->field_mapping[i];
+		bytes += id_or_name_def_hash_process(&m->local_field,
+						     ph, pcarry);
+		bytes += id_or_name_def_hash_process(&m->foreign_field,
+						     ph, pcarry);
+	}
+	return bytes;
+}
+
 uint32_t
 tuple_constraint_def_hash_process(const struct tuple_constraint_def *def,
 				  uint32_t *ph, uint32_t *pcarry)
@@ -86,8 +118,15 @@ tuple_constraint_def_hash_process(const struct tuple_constraint_def *def,
 		PMurHash32_Process(ph, pcarry, &def->fkey.space_id,
 				   sizeof(def->fkey.space_id));
 		bytes += sizeof(def->fkey.space_id);
-		bytes += id_or_name_def_hash_process(&def->fkey.field,
-						     ph, pcarry);
+		PMurHash32_Process(ph, pcarry, &def->fkey.field_mapping_size,
+				   sizeof(def->fkey.field_mapping_size));
+		bytes += sizeof(def->fkey.field_mapping_size);
+		if (def->fkey.field_mapping_size == 0)
+			bytes += id_or_name_def_hash_process(&def->fkey.field,
+							     ph, pcarry);
+		else
+			bytes += field_mapping_hash_process(&def->fkey,
+							     ph, pcarry);
 	}
 	return bytes;
 }
@@ -190,11 +229,49 @@ id_or_name_def_decode(const char **data,
 	return 0;
 }
 
+/**
+ * Helper function of tuple_constraint_def_decode_fkey.
+ * Decode foreign key field mapping, that is expected to be MP_MAP with
+ * local field (id or name) -> foreign field (id or name) correspondence.
+ */
+static int
+field_mapping_decode(const char **data,
+		     struct tuple_constraint_fkey_def *fkey,
+		     struct region *region, const char **error)
+{
+	if (mp_typeof(**data) != MP_MAP) {
+		*error = "field mapping is expected to be a map";
+		return -1;
+	}
+	uint32_t mapping_size = mp_decode_map(data);
+	if (mapping_size == 0) {
+		*error = "field mapping is expected to be a map";
+		return -1;
+	}
+	fkey->field_mapping_size = mapping_size;
+	size_t sz;
+	fkey->field_mapping = region_alloc_array(region,
+		struct tuple_constraint_fkey_field_mapping, mapping_size, &sz);
+	if (fkey->field_mapping == NULL) {
+		*error = "field mapping";
+		return sz;
+	}
+	for (uint32_t i = 0 ; i < 2 * mapping_size; i++) {
+		struct tuple_constraint_id_or_name_def *def = i % 2 == 0 ?
+			&fkey->field_mapping[i / 2].local_field :
+			&fkey->field_mapping[i / 2].foreign_field;
+		int rc = id_or_name_def_decode(data, def, region, error);
+		if (rc != 0)
+			return rc;
+	}
+	return 0;
+}
+
 int
 tuple_constraint_def_decode_fkey(const char **data,
 				 struct tuple_constraint_def **def,
-				 uint32_t *count,
-				 struct region *region, const char **error)
+				 uint32_t *count, struct region *region,
+				 const char **error, bool is_complex)
 {
 	/*
 	 * Expected normal form of foreign keys: {name1=data1, name2=data2..},
@@ -245,6 +322,7 @@ tuple_constraint_def_decode_fkey(const char **data,
 				 "is expected to be a map";
 			return -1;
 		}
+		new_def[i].fkey.field_mapping_size = 0;
 		uint32_t def_size = mp_decode_map(data);
 		bool has_space = false, has_field = false;
 		for (size_t j = 0; j < def_size; j++) {
@@ -271,13 +349,15 @@ tuple_constraint_def_decode_fkey(const char **data,
 			}
 			int rc;
 			struct tuple_constraint_fkey_def *fk = &new_def[i].fkey;
-			if (is_space) {
+			if (is_space)
 				rc = space_id_decode(data, &fk->space_id,
 						     error);
-			} else {
+			else if (!is_complex)
 				rc = id_or_name_def_decode(data, &fk->field,
 							   region, error);
-			}
+			else
+				rc = field_mapping_decode(data, fk,
+							  region, error);
 			if (rc != 0)
 				return rc;
 		}
@@ -288,6 +368,15 @@ tuple_constraint_def_decode_fkey(const char **data,
 		}
 	}
 	return 0;
+}
+
+static void
+id_or_name_def_reserve_bank(const struct tuple_constraint_id_or_name_def *def,
+			    struct data_bank *bank)
+{
+	/* Reservation is required only for strings. */
+	if (def->name_len != 0)
+		data_bank_reserve_str(bank, def->name_len);
 }
 
 static void
@@ -303,6 +392,40 @@ id_or_name_def_copy(struct tuple_constraint_id_or_name_def *dst,
 		dst->name = "";
 }
 
+static void
+field_mapping_reserve_bank(const struct tuple_constraint_fkey_def *def,
+			   struct data_bank *bank)
+{
+	assert(def->field_mapping_size != 0);
+	size_t bytes = def->field_mapping_size * sizeof(def->field_mapping[0]);
+	data_bank_reserve_data(bank, bytes);
+	for (uint32_t i = 0; i < def->field_mapping_size; i++) {
+		const struct tuple_constraint_fkey_field_mapping *f =
+			&def->field_mapping[i];
+		id_or_name_def_reserve_bank(&f->local_field, bank);
+		id_or_name_def_reserve_bank(&f->foreign_field, bank);
+	}
+}
+
+static void
+field_mapping_copy(struct tuple_constraint_fkey_def *dst,
+		   const struct tuple_constraint_fkey_def *src,
+		   struct data_bank *bank)
+{
+	assert(src->field_mapping_size != 0);
+	dst->field_mapping_size = src->field_mapping_size;
+	size_t bytes = src->field_mapping_size * sizeof(dst->field_mapping[0]);
+	dst->field_mapping = data_bank_create_data(bank, bytes);
+	for (uint32_t i = 0; i < src->field_mapping_size; i++) {
+		struct tuple_constraint_fkey_field_mapping *d =
+			&dst->field_mapping[i];
+		const struct tuple_constraint_fkey_field_mapping *s =
+			&src->field_mapping[i];
+		id_or_name_def_copy(&d->local_field, &s->local_field, bank);
+		id_or_name_def_copy(&d->foreign_field, &s->foreign_field, bank);
+	}
+}
+
 /**
  * Reserve strings needed for given constraint definition @a dev in given
  * string @a bank.
@@ -315,8 +438,10 @@ tuple_constraint_def_reserve_bank(const struct tuple_constraint_def *def,
 	if (def->type == CONSTR_FUNC) {
 	} else {
 		assert(def->type == CONSTR_FKEY);
-		if (def->fkey.field.name_len != 0)
-			data_bank_reserve_str(bank, def->fkey.field.name_len);
+		if (def->fkey.field_mapping_size == 0)
+			id_or_name_def_reserve_bank(&def->fkey.field, bank);
+		else
+			field_mapping_reserve_bank(&def->fkey, bank);
 	}
 }
 
@@ -337,7 +462,12 @@ tuple_constraint_def_copy(struct tuple_constraint_def *dst,
 	} else {
 		assert(src->type == CONSTR_FKEY);
 		dst->fkey.space_id = src->fkey.space_id;
-		id_or_name_def_copy(&dst->fkey.field, &src->fkey.field, bank);
+		dst->fkey.field_mapping_size = 0;
+		if (src->fkey.field_mapping_size == 0)
+			id_or_name_def_copy(&dst->fkey.field, &src->fkey.field,
+					    bank);
+		else
+			field_mapping_copy(&dst->fkey, &src->fkey, bank);
 	}
 }
 

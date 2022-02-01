@@ -51,8 +51,11 @@ tuple_constraint_collocate(const struct tuple_constraint_def *defs,
 	for (size_t i = 0; i < count; i++) {
 		if (defs[i].type != CONSTR_FKEY)
 			continue;
+		uint32_t field_count = defs[i].fkey.field_mapping_size;
+		if (field_count == 0)
+			field_count = 1; /* field foreign key */
 		size_t size = offsetof(struct tuple_constraint_fkey_data,
-				       data[1]);
+				       data[field_count]);
 		data_bank_reserve_data(&bank, size);
 	}
 	struct tuple_constraint *res =
@@ -67,10 +70,13 @@ tuple_constraint_collocate(const struct tuple_constraint_def *defs,
 			res[i].fkey = NULL;
 			continue;
 		}
+		uint32_t field_count = defs[i].fkey.field_mapping_size;
+		if (field_count == 0)
+			field_count = 1; /* field foreign key */
 		size_t size = offsetof(struct tuple_constraint_fkey_data,
-				       data[1]);
+				       data[field_count]);
 		res[i].fkey = data_bank_create_data(&bank, size);
-		res[i].fkey->field_count = 1;
+		res[i].fkey->field_count = field_count;
 	}
 
 	assert(data_bank_size(&bank) == 0);

@@ -270,7 +270,7 @@ field_def_parse_foreign_key(const char **data, void *opts,
 	const char *decode_error = "wtf";
 	int rc = tuple_constraint_def_decode_fkey(data, &def->constraint_def,
 						  &def->constraint_count,
-						  region, &decode_error);
+						  region, &decode_error, false);
 	if (rc != 0) {
 		if (rc > 0)
 			diag_set(OutOfMemory, rc, "region", decode_error);

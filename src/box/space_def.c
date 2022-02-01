@@ -58,6 +58,15 @@ space_opts_parse_constraint(const char **data, void *vopts,
 			    struct region *region,
 			    uint32_t errcode, uint32_t field_no);
 
+/**
+ * Callback to parse a value with 'foreign_key' key in msgpack space opts
+ * definition. See function definition below.
+ */
+static int
+space_opts_parse_foreign_key(const char **data, void *vopts,
+			     struct region *region,
+			     uint32_t errcode, uint32_t field_no);
+
 const struct opt_def space_opts_reg[] = {
 	OPT_DEF("group_id", OPT_UINT32, struct space_opts, group_id),
 	OPT_DEF("temporary", OPT_BOOL, struct space_opts, is_temporary),
@@ -65,6 +74,7 @@ const struct opt_def space_opts_reg[] = {
 	OPT_DEF("is_sync", OPT_BOOL, struct space_opts, is_sync),
 	OPT_DEF("sql", OPT_STRPTR, struct space_opts, sql),
 	OPT_DEF_CUSTOM("constraint", space_opts_parse_constraint),
+	OPT_DEF_CUSTOM("foreign_key", space_opts_parse_foreign_key),
 	OPT_DEF_LEGACY("checks"),
 	OPT_END,
 };
@@ -352,6 +362,38 @@ space_opts_parse_constraint(const char **data, void *vopts,
 	int rc = tuple_constraint_def_decode(data, &opts->constraint_def,
 					     &opts->constraint_count, region,
 					     &decode_error);
+	if (rc != 0) {
+		if (rc > 0)
+			diag_set(OutOfMemory, rc, "region", decode_error);
+		else
+			diag_set(ClientError, errcode, field_no, decode_error);
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Parse foreign key array from msgpack.
+ * Used as callback to parse a value with 'foreign_key' key in space options.
+ * Move @a data msgpack pointer to the end of msgpack value.
+ * By convention @a opts must point to corresponding struct space_opts.
+ * Allocate a temporary constraint array on @a region and set pointer to it
+ *  as field_def->constraint, also setting field_def->constraint_count.
+ * Return 0 on success or -1 on error (diag is set to @a errcode with
+ *  reference to field by @a field_no).
+ */
+int
+space_opts_parse_foreign_key(const char **data, void *vopts,
+			     struct region *region,
+			     uint32_t errcode, uint32_t field_no)
+
+{
+	/* Expected normal form of constraints: {name1=func1, name2=func2..}. */
+	struct space_opts *opts = (struct space_opts *)vopts;
+	const char *decode_error = "wtf";
+	int rc = tuple_constraint_def_decode_fkey(data, &opts->constraint_def,
+						  &opts->constraint_count,
+						  region, &decode_error, true);
 	if (rc != 0) {
 		if (rc > 0)
 			diag_set(OutOfMemory, rc, "region", decode_error);
