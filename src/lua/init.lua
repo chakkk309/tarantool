@@ -30,9 +30,9 @@ local ROCKS_LIB_TEMPLATES = { ROCKS_LIB_PATH .. '/?.'..soext }
 local ROCKS_LUA_TEMPLATES = { ROCKS_LUA_PATH .. '/?.lua', ROCKS_LUA_PATH .. '/?/init.lua' }
 
 get_stack = function()
-    local info = debug.getinfo(1)
+    local info = debug.getinfo(2)
     local stack = {}
-    local i = 1
+    local i = 2
     while info ~= nil do
         stack[i] = info
         i = i + 1
@@ -42,9 +42,20 @@ get_stack = function()
 end
 
 print_stack = function(stack)
-    for k, v in pairs(stack) do
-        print(v.short_src, ":", v.linedefined)
+    for _, v in pairs(stack) do
+        print(string.format("[%s]:%d, %s, %d, nup = %d", v.short_src, v.currentline, v.name, v.linedefined, v.nups))
     end
+end
+
+get_require_overload_num = function(stack)
+    local result = 0
+    for _, v in pairs(stack) do
+        if nil ~= v.name and nil ~= string.find(v.name, "wrapper_e6c2bafc7d0611ec8008db177bebd1df") then
+            return result + 1
+        end
+        result = result + 1
+    end
+    return 0
 end
 
 old_require = require
@@ -90,40 +101,24 @@ local function module_name_by_func(func_level)
     local debug = debug or old_require('debug')
     local src_name = debug.getinfo(func_level + 1).source
     src_name = src_name:sub(2)
-    print("result module name = ", src_name)
-    --local second_name, value = debug.getlocal(3, 1)
-    --print("second mod name = ", second_name, value)
-    --second_name, value = debug.getlocal(3, 2)
-    --print("second mod name = ", second_name, value)
-    --for k, v in pairs(debug.getinfo(func_level + 2)) do
-    --    print(k, v)
-    --end
     return module_name_form_filename(src_name)
 end
 
+wrapper_e6c2bafc7d0611ec8008db177bebd1df = function()
+    return require('log.internal')
+end
+
 require = function(modname)
-    print('modname require 1 = ', modname)
-    local debug = debug or old_require('debug')
     if modname == 'log' then
-        print('require log')
         local log = old_require(modname)
-        print('set module name')
-        log.new(module_name_by_func(2))
-        local stack1 = get_stack()
-        print('stack1')
-        print_stack(stack1)
-        local stack2 = debug.traceback()
-        print('stack2 = ', stack2)
-        print('log.internal')
-        print_stack(log.internal)
-        return log
+        local stack_int = wrapper_e6c2bafc7d0611ec8008db177bebd1df()
+        local overload_num = get_require_overload_num(stack_int)
+        log:new(module_name_by_func(2 + overload_num))
+        return table.deepcopy(log)
     end
     if modname == 'log.internal' then
-        return debug.traceback()
+        return get_stack()
     end
-    print('stack in our require')
-    print_stack(get_stack())
-    print(debug.traceback())
     return old_require(modname)
 end
 

@@ -298,7 +298,7 @@ local function verify_option(k, v, ...)
 end
 
 -- Main routine which pass data to C logging code.
-local function say(level, fmt, ...)
+local function say(self, level, fmt, ...)
     if ffi.C.log_level < level then
         -- don't waste cycles on debug.getinfo()
         return
@@ -332,17 +332,22 @@ local function say(level, fmt, ...)
         line = frame.currentline or 0
         file = frame.short_src or frame.src or 'eval'
     end
+
     local module_name = box.NULL
     if (log_cfg.print_module_name) then
-        module_name = log_cfg.module_name
+        if (self ~= nil) then
+            module_name = self.module_name
+        else
+            module_name = "log"
+        end
     end
     ffi.C._say(level, module_name, file, line, nil, format, fmt)
 end
 
 -- Just a syntactic sugar over say routine.
-local function say_closure(lvl)
+local function say_closure(lvl, self)
     return function (fmt, ...)
-        say(lvl, fmt, ...)
+        say(self, lvl, fmt, ...)
     end
 end
 
@@ -365,7 +370,8 @@ local function set_log_level(level, update_box_cfg)
     end
 
     local m = "log: level set to %s"
-    say(S_DEBUG, m:format(level))
+    say_closure(S_DEBUG, nil)(m:format(level))
+    --say(S_DEBUG, m:format(level))
 end
 
 -- Tries to set a new level, or print an error.
@@ -399,7 +405,8 @@ local function set_log_format(name, update_box_cfg)
     end
 
     local m = "log: format set to '%s'"
-    say(S_DEBUG, m:format(name))
+    say_closure(S_DEBUG, nil)(m:format(name))
+    --say(S_DEBUG, m:format(name))
 end
 
 -- Tries to set a new format, or print an error.
@@ -410,31 +417,6 @@ local function log_format(name)
     end
 
     set_log_format(name, true)
-end
-
--- Set new logging module name, the module name must be valid!
-local function set_module_name(module_name)
-    assert(type(module_name) == 'string')
-
-    rawset(log_cfg, 'module_name', module_name)
-
-    local m = "log: module_name set to %s"
-    say(S_DEBUG, m:format(module_name))
-end
-
--- Tries to set a new module name, or print an error.
-local function log_module_name(module_name)
-    local ok, msg = verify_option('module_name', module_name)
-    if not ok then
-        error(msg)
-    end
-
-    set_module_name(module_name, true)
-end
-
-
-local function log_new(module_name)
-    log_module_name(module_name)
 end
 
 -- Returns pid of a pipe process.
@@ -627,7 +609,8 @@ local function load_cfg(self, cfg)
     box_cfg_update()
 
     local m = "log.cfg({log=%s,level=%s,nonblock=%s,print_module_name=%s,format=\'%s\',module_name=%s})"
-    say(S_DEBUG, m:format(cfg.log, cfg.level, cfg.nonblock, cfg.print_module_name, cfg.format, cfg.module_name))
+    say_closure(S_DEBUG, nil)(m:format(cfg.log, cfg.level, cfg.nonblock, cfg.print_module_name, cfg.format, cfg.module_name))
+    --say(S_DEBUG, m:format(cfg.log, cfg.level, cfg.nonblock, cfg.print_module_name, cfg.format, cfg.module_name))
 end
 
 local compat_warning_said = false
@@ -635,22 +618,18 @@ local compat_v16 = {
     logger_pid = function()
         if not compat_warning_said then
             compat_warning_said = true
-            say(S_WARN, 'logger_pid() is deprecated, please use pid() instead')
+            --say(S_WARN, 'logger_pid() is deprecated, please use pid() instead')
+            say_closure(S_WARN, nil)('logger_pid() is deprecated, please use pid() instead')
         end
         return log_pid()
     end;
 }
 
 local log = {
-    warn = say_closure(S_WARN),
-    info = say_closure(S_INFO),
-    verbose = say_closure(S_VERBOSE),
-    debug = say_closure(S_DEBUG),
-    error = say_closure(S_ERROR),
     rotate = log_rotate,
-    new = log_new,
     pid = log_pid,
     level = log_level,
+    mod_name = "tarantool",
     log_format = log_format,
     cfg = setmetatable(log_cfg, {
         __call = load_cfg,
@@ -661,8 +640,27 @@ local log = {
         cfg_set_log_level = box_api_cfg_set_log_level,
         cfg_set_log_format = box_api_set_log_format,
     },
-    internal = get_stack()
 }
+
+-- Set new logging module name, the module name must be valid!
+local function set_module_name(self, module_name)
+    self.module_name = module_name
+end
+
+-- Tries to set a new module name, or print an error.
+local function log_module_name(self, module_name)
+    local ok, msg = verify_option('module_name', module_name)
+    if not ok then
+        error(msg)
+    end
+
+    set_module_name(self, module_name)
+end
+
+
+function log:new(module_name)
+    log_module_name(self, module_name)
+end
 
 setmetatable(log, {
     __serialize = function(self)
@@ -670,7 +668,21 @@ setmetatable(log, {
         res.box_api = nil
         return setmetatable(res, {})
     end,
-    __index = compat_v16;
+    __index = function(self, key)
+        if key == 'info' then
+            return say_closure(S_INFO, self)
+        elseif key == 'warn' then
+            return say_closure(S_WARN, self)
+        elseif key == 'verbose' then
+            return say_closure(S_VERBOSE, self)
+        elseif key == 'debug' then
+            return say_closure(S_DEBUG, self)
+        elseif key == 'error' then
+            return say_closure(S_ERROR, self)
+        elseif key == 'logger_pid' then
+            return compat_v16.logger_pid
+        end
+    end
 })
 
 return log
