@@ -148,7 +148,7 @@ struct tuple_field {
  * @retval boolean nullability attribute
  */
 static inline bool
-tuple_field_is_nullable(struct tuple_field *tuple_field)
+tuple_field_is_nullable(const struct tuple_field *tuple_field)
 {
 	return tuple_field->nullable_action == ON_CONFLICT_ACTION_NONE;
 }

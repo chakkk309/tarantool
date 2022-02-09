@@ -937,6 +937,8 @@ static int
 tuple_field_check_constraint(const struct tuple_field *field,
 			     const char *mp_data, const char *mp_data_end)
 {
+	if (tuple_field_is_nullable(field) && mp_typeof(*mp_data) == MP_NIL)
+		return 0;
 	for (uint32_t i = 0; i < field->constraint_count; i++) {
 		struct tuple_constraint *c = &field->constraint[i];
 		if (c->check(c, mp_data, mp_data_end, field) != 0)
