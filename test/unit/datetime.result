@@ -517,7 +517,7 @@ ok 1 - subtests
     ok 16 - string '10000-01-01T00:00:00Z' expected, received '10000-01-01T00:00:00Z'
     ok 17 - string '5879611-07-11T00:00:00Z' expected, received '5879611-07-11T00:00:00Z'
 ok 2 - subtests
-    1..150
+    1..154
     ok 1 - string '20121224' parse, len 8
     ok 2 - string '20121224' parse, epoch 1356307200
     ok 3 - string '20121224  Foo bar' parse, len 8
@@ -562,113 +562,117 @@ ok 2 - subtests
     ok 42 - string '-10000-12-31' parse, epoch -377705203200
     ok 43 - string '-5879610-06-22' parse, len 14
     ok 44 - string '-5879610-06-22' parse, epoch -185604722870400
-    ok 45 - string '9999-12-31' parse, len 10
-    ok 46 - string '9999-12-31' parse, epoch 253402214400
-    ok 47 - string '10000-01-01' parse, len 11
-    ok 48 - string '10000-01-01' parse, epoch 253402300800
-    ok 49 - string '5879611-07-11' parse, len 13
-    ok 50 - string '5879611-07-11' parse, epoch 185480451417600
-    ok 51 - expected failure of string '20121232' parse, len 0
-    ok 52 - expected failure of string '2012-12-310' parse, len 0
-    ok 53 - expected failure of string '2012-13-24' parse, len 0
-    ok 54 - expected failure of string '2012367' parse, len 0
-    ok 55 - expected failure of string '2012-000' parse, len 0
-    ok 56 - expected failure of string '2012W533' parse, len 0
-    ok 57 - expected failure of string '2012-W52-8' parse, len 0
-    ok 58 - expected failure of string '2012Q495' parse, len 0
-    ok 59 - expected failure of string '2012-Q5-85' parse, len 0
-    ok 60 - expected failure of string '20123670' parse, len 0
-    ok 61 - expected failure of string '201212320' parse, len 0
-    ok 62 - expected failure of string '2012-12' parse, len 0
-    ok 63 - expected failure of string '2012-Q4' parse, len 0
-    ok 64 - expected failure of string '2012-Q42' parse, len 0
-    ok 65 - expected failure of string '2012-Q1-1' parse, len 0
-    ok 66 - expected failure of string '2012Q/* 420' parse, len 0
-    ok 67 - expected failure of string '2012-Q-420' parse, len 0
-    ok 68 - expected failure of string '2012Q11' parse, len 0
-    ok 69 - expected failure of string '2012Q1234' parse, len 0
-    ok 70 - expected failure of string '2012W12' parse, len 0
-    ok 71 - expected failure of string '2012W1234' parse, len 0
-    ok 72 - expected failure of string '2012W-123' parse, len 0
-    ok 73 - expected failure of string '2012-W12' parse, len 0
-    ok 74 - expected failure of string '2012-W12-12' parse, len 0
-    ok 75 - expected failure of string '2012U1234' parse, len 0
-    ok 76 - expected failure of string '2012-1234' parse, len 0
-    ok 77 - expected failure of string '2012-X1234' parse, len 0
-    ok 78 - parse string 'Thursday' using '%A' (result '1900-01-00T00:00:00+0000')
-    ok 79 - parse string 'Thu' using '%a' (result '1900-01-00T00:00:00+0000')
-    ok 80 - parse string 'January' using '%B' (result '1900-01-00T00:00:00+0000')
-    ok 81 - parse string 'Jan' using '%b' (result '1900-01-00T00:00:00+0000')
-    ok 82 - parse string 'Jan' using '%h' (result '1900-01-00T00:00:00+0000')
-    ok 83 - parse string 'Thu Jan  1 03:00:00 1970' using '%c' (result '1970-01-01T03:00:00+0000')
-    ok 84 - parse string '01/01/70' using '%D' (result '1970-01-01T00:00:00+0000')
-    ok 85 - parse string '01/01/70' using '%m/%d/%y' (result '1970-01-01T00:00:00+0000')
-    ok 86 - parse string '01' using '%d' (result '1900-01-01T00:00:00+0000')
-    ok 87 - parse string 'Thu Jan  1 03:00:00 1970' using '%Ec' (result '1970-01-01T03:00:00+0000')
-    ok 88 - parse string '01/01/70' using '%Ex' (result '1970-01-01T00:00:00+0000')
-    ok 89 - parse string '03:00:00' using '%EX' (result '1900-01-00T03:00:00+0000')
-    ok 90 - parse string '70' using '%Ey' (result '1970-01-00T00:00:00+0000')
-    ok 91 - parse string '1970' using '%EY' (result '1970-01-00T00:00:00+0000')
-    ok 92 - parse string '01' using '%Od' (result '1900-01-01T00:00:00+0000')
-    ok 93 - parse string '03' using '%OH' (result '1900-01-00T03:00:00+0000')
-    ok 94 - parse string '03' using '%OI' (result '1900-01-00T03:00:00+0000')
-    ok 95 - parse string '01' using '%Om' (result '1900-01-00T00:00:00+0000')
-    ok 96 - parse string '00' using '%OM' (result '1900-01-00T00:00:00+0000')
-    ok 97 - parse string '00' using '%OS' (result '1900-01-00T00:00:00+0000')
-    ok 98 - parse string '4' using '%Ou' (result '1900-01-00T00:00:00+0000')
-    ok 99 - parse string '00' using '%OU' (result '1900-01-00T00:00:00+0000')
-    ok 100 - parse string '4' using '%Ow' (result '1900-01-00T00:00:00+0000')
-    ok 101 - parse string '00' using '%OW' (result '1900-01-00T00:00:00+0000')
-    ok 102 - parse string '70' using '%Oy' (result '1970-01-00T00:00:00+0000')
-    ok 103 - parse string ' 1' using '%e' (result '1900-01-01T00:00:00+0000')
-    ok 104 - parse string '1970-01-01' using '%F' (result '1970-01-01T00:00:00+0000')
-    ok 105 - parse string '1970-01-01' using '%Y-%m-%d' (result '1970-01-01T00:00:00+0000')
-    ok 106 - parse string '03' using '%H' (result '1900-01-00T03:00:00+0000')
-    ok 107 - parse string '03' using '%I' (result '1900-01-00T03:00:00+0000')
-    ok 108 - parse string '001' using '%j' (result '1900-01-00T00:00:00+0000')
-    ok 109 - parse string ' 3' using '%k' (result '1900-01-00T03:00:00+0000')
-    ok 110 - parse string ' 3' using '%l' (result '1900-01-00T03:00:00+0000')
-    ok 111 - parse string '00' using '%M' (result '1900-01-00T00:00:00+0000')
-    ok 112 - parse string '01' using '%m' (result '1900-01-00T00:00:00+0000')
-    ok 113 - parse string '
+    ok 45 - string '-5879610W521' parse, len 12
+    ok 46 - string '-5879610W521' parse, epoch -185604706627200
+    ok 47 - string '9999-12-31' parse, len 10
+    ok 48 - string '9999-12-31' parse, epoch 253402214400
+    ok 49 - string '10000-01-01' parse, len 11
+    ok 50 - string '10000-01-01' parse, epoch 253402300800
+    ok 51 - string '5879611-07-11' parse, len 13
+    ok 52 - string '5879611-07-11' parse, epoch 185480451417600
+    ok 53 - string '5879611Q101' parse, len 11
+    ok 54 - string '5879611Q101' parse, epoch 185480434915200
+    ok 55 - expected failure of string '20121232' parse, len 0
+    ok 56 - expected failure of string '2012-12-310' parse, len 0
+    ok 57 - expected failure of string '2012-13-24' parse, len 0
+    ok 58 - expected failure of string '2012367' parse, len 0
+    ok 59 - expected failure of string '2012-000' parse, len 0
+    ok 60 - expected failure of string '2012W533' parse, len 0
+    ok 61 - expected failure of string '2012-W52-8' parse, len 0
+    ok 62 - expected failure of string '2012Q495' parse, len 0
+    ok 63 - expected failure of string '2012-Q5-85' parse, len 0
+    ok 64 - expected failure of string '20123670' parse, len 0
+    ok 65 - expected failure of string '201212320' parse, len 0
+    ok 66 - expected failure of string '2012-12' parse, len 0
+    ok 67 - expected failure of string '2012-Q4' parse, len 0
+    ok 68 - expected failure of string '2012-Q42' parse, len 0
+    ok 69 - expected failure of string '2012-Q1-1' parse, len 0
+    ok 70 - expected failure of string '2012Q/* 420' parse, len 0
+    ok 71 - expected failure of string '2012-Q-420' parse, len 0
+    ok 72 - expected failure of string '2012Q11' parse, len 0
+    ok 73 - expected failure of string '2012Q1234' parse, len 0
+    ok 74 - expected failure of string '2012W12' parse, len 0
+    ok 75 - expected failure of string '2012W1234' parse, len 0
+    ok 76 - expected failure of string '2012W-123' parse, len 0
+    ok 77 - expected failure of string '2012-W12' parse, len 0
+    ok 78 - expected failure of string '2012-W12-12' parse, len 0
+    ok 79 - expected failure of string '2012U1234' parse, len 0
+    ok 80 - expected failure of string '2012-1234' parse, len 0
+    ok 81 - expected failure of string '2012-X1234' parse, len 0
+    ok 82 - parse string 'Thursday' using '%A' (result '1900-01-00T00:00:00+0000')
+    ok 83 - parse string 'Thu' using '%a' (result '1900-01-00T00:00:00+0000')
+    ok 84 - parse string 'January' using '%B' (result '1900-01-00T00:00:00+0000')
+    ok 85 - parse string 'Jan' using '%b' (result '1900-01-00T00:00:00+0000')
+    ok 86 - parse string 'Jan' using '%h' (result '1900-01-00T00:00:00+0000')
+    ok 87 - parse string 'Thu Jan  1 03:00:00 1970' using '%c' (result '1970-01-01T03:00:00+0000')
+    ok 88 - parse string '01/01/70' using '%D' (result '1970-01-01T00:00:00+0000')
+    ok 89 - parse string '01/01/70' using '%m/%d/%y' (result '1970-01-01T00:00:00+0000')
+    ok 90 - parse string '01' using '%d' (result '1900-01-01T00:00:00+0000')
+    ok 91 - parse string 'Thu Jan  1 03:00:00 1970' using '%Ec' (result '1970-01-01T03:00:00+0000')
+    ok 92 - parse string '01/01/70' using '%Ex' (result '1970-01-01T00:00:00+0000')
+    ok 93 - parse string '03:00:00' using '%EX' (result '1900-01-00T03:00:00+0000')
+    ok 94 - parse string '70' using '%Ey' (result '1970-01-00T00:00:00+0000')
+    ok 95 - parse string '1970' using '%EY' (result '1970-01-00T00:00:00+0000')
+    ok 96 - parse string '01' using '%Od' (result '1900-01-01T00:00:00+0000')
+    ok 97 - parse string '03' using '%OH' (result '1900-01-00T03:00:00+0000')
+    ok 98 - parse string '03' using '%OI' (result '1900-01-00T03:00:00+0000')
+    ok 99 - parse string '01' using '%Om' (result '1900-01-00T00:00:00+0000')
+    ok 100 - parse string '00' using '%OM' (result '1900-01-00T00:00:00+0000')
+    ok 101 - parse string '00' using '%OS' (result '1900-01-00T00:00:00+0000')
+    ok 102 - parse string '4' using '%Ou' (result '1900-01-00T00:00:00+0000')
+    ok 103 - parse string '00' using '%OU' (result '1900-01-00T00:00:00+0000')
+    ok 104 - parse string '4' using '%Ow' (result '1900-01-00T00:00:00+0000')
+    ok 105 - parse string '00' using '%OW' (result '1900-01-00T00:00:00+0000')
+    ok 106 - parse string '70' using '%Oy' (result '1970-01-00T00:00:00+0000')
+    ok 107 - parse string ' 1' using '%e' (result '1900-01-01T00:00:00+0000')
+    ok 108 - parse string '1970-01-01' using '%F' (result '1970-01-01T00:00:00+0000')
+    ok 109 - parse string '1970-01-01' using '%Y-%m-%d' (result '1970-01-01T00:00:00+0000')
+    ok 110 - parse string '03' using '%H' (result '1900-01-00T03:00:00+0000')
+    ok 111 - parse string '03' using '%I' (result '1900-01-00T03:00:00+0000')
+    ok 112 - parse string '001' using '%j' (result '1900-01-00T00:00:00+0000')
+    ok 113 - parse string ' 3' using '%k' (result '1900-01-00T03:00:00+0000')
+    ok 114 - parse string ' 3' using '%l' (result '1900-01-00T03:00:00+0000')
+    ok 115 - parse string '00' using '%M' (result '1900-01-00T00:00:00+0000')
+    ok 116 - parse string '01' using '%m' (result '1900-01-00T00:00:00+0000')
+    ok 117 - parse string '
 ' using '%n' (result '1900-01-00T00:00:00+0000')
-    ok 114 - parse string 'AM' using '%p' (result '1900-01-00T00:00:00+0000')
-    ok 115 - parse string '03:00' using '%R' (result '1900-01-00T03:00:00+0000')
-    ok 116 - parse string '03:00' using '%H:%M' (result '1900-01-00T03:00:00+0000')
-    ok 117 - parse string '03:00:00 AM' using '%r' (result '1900-01-00T03:00:00+0000')
-    ok 118 - parse string '03:00:00 AM' using '%I:%M:%S %p' (result '1900-01-00T03:00:00+0000')
-    ok 119 - parse string '00' using '%S' (result '1900-01-00T00:00:00+0000')
-    ok 120 - parse string '10800' using '%s' (result '1900-01-00T00:00:00+0000')
-    ok 121 - parse string '125' using '%f' (result '1900-01-00T00:00:00+0000')
-    ok 122 - parse string '03:00:00' using '%T' (result '1900-01-00T03:00:00+0000')
-    ok 123 - parse string '03:00:00' using '%H:%M:%S' (result '1900-01-00T03:00:00+0000')
-    ok 124 - parse string '	' using '%t' (result '1900-01-00T00:00:00+0000')
-    ok 125 - parse string '00' using '%U' (result '1900-01-00T00:00:00+0000')
-    ok 126 - parse string '4' using '%u' (result '1900-01-00T00:00:00+0000')
-    ok 127 - parse string '1970' using '%G' (result '1970-01-00T00:00:00+0000')
-    ok 128 - parse string '70' using '%g' (result '1970-01-00T00:00:00+0000')
-    ok 129 - parse string ' 1-Jan-1970' using '%v' (result '1970-01-01T00:00:00+0000')
-    ok 130 - parse string ' 1-Jan-1970' using '%e-%b-%Y' (result '1970-01-01T00:00:00+0000')
-    ok 131 - parse string '00' using '%W' (result '1900-01-00T00:00:00+0000')
-    ok 132 - parse string '4' using '%w' (result '1900-01-00T00:00:00+0000')
-    ok 133 - parse string '03:00:00' using '%X' (result '1900-01-00T03:00:00+0000')
-    ok 134 - parse string '01/01/70' using '%x' (result '1970-01-01T00:00:00+0000')
-    ok 135 - parse string '70' using '%y' (result '1970-01-00T00:00:00+0000')
-    ok 136 - parse string '1970' using '%Y' (result '1970-01-00T00:00:00+0000')
-    ok 137 - parse string '+0300' using '%z' (result '1900-01-00T00:00:00+0300')
-    ok 138 - parse string '%' using '%%' (result '1900-01-00T00:00:00+0000')
-    ok 139 - parse string '1970-01-01T03:00:00.125000000+0300' using '%Y-%m-%dT%H:%M:%S.%9f%z' (result '1970-01-01T03:00:00+0300')
-    ok 140 - parse string '1970-01-01T03:00:00.125+0300' using '%Y-%m-%dT%H:%M:%S.%f%z' (result '1970-01-01T03:00:00+0300')
-    ok 141 - parse string '1970-01-01T03:00:00.125' using '%Y-%m-%dT%H:%M:%S.%f' (result '1970-01-01T03:00:00+0000')
-    ok 142 - parse string '1970-01-01T03:00:00.125' using '%FT%T.%f' (result '1970-01-01T03:00:00+0000')
-    ok 143 - parse string '1970-01-01T03:00:00.125+0300' using '%FT%T.%f%z' (result '1970-01-01T03:00:00+0300')
-    ok 144 - parse string '1970-01-01T03:00:00.125000000+0300' using '%FT%T.%9f%z' (result '1970-01-01T03:00:00+0300')
-    ok 145 - parse string '0000-01-01' using '%Y-%m-%d' (result '0000-01-01T00:00:00+0000')
-    ok 146 - parse string '0001-01-01' using '%Y-%m-%d' (result '0001-01-01T00:00:00+0000')
-    ok 147 - parse string '9999-01-01' using '%Y-%m-%d' (result '9999-01-01T00:00:00+0000')
-    ok 148 - parse string '10000-01-01' using '%Y-%m-%d' (result '10000-01-01T00:00:00+0000')
-    ok 149 - parse string '10000-01-01' using '%Y-%m-%d' (result '10000-01-01T00:00:00+0000')
-    ok 150 - parse string '5879611-07-11' using '%Y-%m-%d' (result '5879611-07-11T00:00:00+0000')
+    ok 118 - parse string 'AM' using '%p' (result '1900-01-00T00:00:00+0000')
+    ok 119 - parse string '03:00' using '%R' (result '1900-01-00T03:00:00+0000')
+    ok 120 - parse string '03:00' using '%H:%M' (result '1900-01-00T03:00:00+0000')
+    ok 121 - parse string '03:00:00 AM' using '%r' (result '1900-01-00T03:00:00+0000')
+    ok 122 - parse string '03:00:00 AM' using '%I:%M:%S %p' (result '1900-01-00T03:00:00+0000')
+    ok 123 - parse string '00' using '%S' (result '1900-01-00T00:00:00+0000')
+    ok 124 - parse string '10800' using '%s' (result '1900-01-00T00:00:00+0000')
+    ok 125 - parse string '125' using '%f' (result '1900-01-00T00:00:00+0000')
+    ok 126 - parse string '03:00:00' using '%T' (result '1900-01-00T03:00:00+0000')
+    ok 127 - parse string '03:00:00' using '%H:%M:%S' (result '1900-01-00T03:00:00+0000')
+    ok 128 - parse string '	' using '%t' (result '1900-01-00T00:00:00+0000')
+    ok 129 - parse string '00' using '%U' (result '1900-01-00T00:00:00+0000')
+    ok 130 - parse string '4' using '%u' (result '1900-01-00T00:00:00+0000')
+    ok 131 - parse string '1970' using '%G' (result '1970-01-00T00:00:00+0000')
+    ok 132 - parse string '70' using '%g' (result '1970-01-00T00:00:00+0000')
+    ok 133 - parse string ' 1-Jan-1970' using '%v' (result '1970-01-01T00:00:00+0000')
+    ok 134 - parse string ' 1-Jan-1970' using '%e-%b-%Y' (result '1970-01-01T00:00:00+0000')
+    ok 135 - parse string '00' using '%W' (result '1900-01-00T00:00:00+0000')
+    ok 136 - parse string '4' using '%w' (result '1900-01-00T00:00:00+0000')
+    ok 137 - parse string '03:00:00' using '%X' (result '1900-01-00T03:00:00+0000')
+    ok 138 - parse string '01/01/70' using '%x' (result '1970-01-01T00:00:00+0000')
+    ok 139 - parse string '70' using '%y' (result '1970-01-00T00:00:00+0000')
+    ok 140 - parse string '1970' using '%Y' (result '1970-01-00T00:00:00+0000')
+    ok 141 - parse string '+0300' using '%z' (result '1900-01-00T00:00:00+0300')
+    ok 142 - parse string '%' using '%%' (result '1900-01-00T00:00:00+0000')
+    ok 143 - parse string '1970-01-01T03:00:00.125000000+0300' using '%Y-%m-%dT%H:%M:%S.%9f%z' (result '1970-01-01T03:00:00+0300')
+    ok 144 - parse string '1970-01-01T03:00:00.125+0300' using '%Y-%m-%dT%H:%M:%S.%f%z' (result '1970-01-01T03:00:00+0300')
+    ok 145 - parse string '1970-01-01T03:00:00.125' using '%Y-%m-%dT%H:%M:%S.%f' (result '1970-01-01T03:00:00+0000')
+    ok 146 - parse string '1970-01-01T03:00:00.125' using '%FT%T.%f' (result '1970-01-01T03:00:00+0000')
+    ok 147 - parse string '1970-01-01T03:00:00.125+0300' using '%FT%T.%f%z' (result '1970-01-01T03:00:00+0300')
+    ok 148 - parse string '1970-01-01T03:00:00.125000000+0300' using '%FT%T.%9f%z' (result '1970-01-01T03:00:00+0300')
+    ok 149 - parse string '0000-01-01' using '%Y-%m-%d' (result '0000-01-01T00:00:00+0000')
+    ok 150 - parse string '0001-01-01' using '%Y-%m-%d' (result '0001-01-01T00:00:00+0000')
+    ok 151 - parse string '9999-01-01' using '%Y-%m-%d' (result '9999-01-01T00:00:00+0000')
+    ok 152 - parse string '10000-01-01' using '%Y-%m-%d' (result '10000-01-01T00:00:00+0000')
+    ok 153 - parse string '10000-01-01' using '%Y-%m-%d' (result '10000-01-01T00:00:00+0000')
+    ok 154 - parse string '5879611-07-11' using '%Y-%m-%d' (result '5879611-07-11T00:00:00+0000')
 ok 3 - subtests
     1..85
     ok 1 - len 18, expected len 18
