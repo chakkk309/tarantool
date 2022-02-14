@@ -1,6 +1,5 @@
 #!/usr/bin/make -f
 
-
 VERSION  := $(shell dpkg-parsechangelog|grep ^Version|awk '{print $$2}')
 UVERSION := $(shell echo $(VERSION)|sed 's/-[[:digit:]]\+$$//')
 
@@ -68,4 +67,4 @@ clean::
 	rm -f src/trivia/config.h
 
 install/tarantool::
-
+	make -C obj-x86_64-linux-gnu test-force

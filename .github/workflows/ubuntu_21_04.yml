@@ -2,12 +2,12 @@ name: ubuntu_21_04
 
 on:
   push:
-    branches:
-      - 'master'
-      - '[0-9].[0-9]+'
-      - '**-full-ci'
-    tags:
-      - '**'
+#    branches:
+#      - 'master'
+#      - '[0-9].[0-9]+'
+#      - '**-full-ci'
+#    tags:
+#      - '**'
   pull_request:
     types: [opened, reopened, synchronize, labeled]
   repository_dispatch:
