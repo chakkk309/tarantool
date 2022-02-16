@@ -9,6 +9,7 @@
 #include <string.h>
 #include <time.h>
 
+#define DT_PARSE_ISO_TNT
 #include "c-dt/dt.h"
 #include "datetime.h"
 #include "trivia/util.h"
@@ -68,7 +69,7 @@ datetime_strftime(const struct datetime *date, char *buf, size_t len,
 	return tnt_strftime(buf, len, fmt, &tm);
 }
 
-void
+bool
 tm_to_datetime(struct tnt_tm *tm, struct datetime *date)
 {
 	assert(tm != NULL);
@@ -88,9 +89,12 @@ tm_to_datetime(struct tnt_tm *tm, struct datetime *date)
 			dt = ((wday - 4) % 7) + DT_EPOCH_1970_OFFSET;
 		}
 	} else {
-		assert(mday >= 0 && mday < 32);
+		if (mday == 0)
+			mday = 1;
+		assert(mday >= 1 && mday <= 31);
 		assert(mon >= 0 && mon <= 11);
-		dt = dt_from_ymd(year + 1900, mon + 1, mday);
+		if (dt_from_ymd_checked(year + 1900, mon + 1, mday, &dt) == false)
+			return false;
 	}
 	int64_t local_secs =
 		(int64_t)dt * SECS_PER_DAY - SECS_EPOCH_1970_OFFSET;
@@ -99,6 +103,7 @@ tm_to_datetime(struct tnt_tm *tm, struct datetime *date)
 	date->nsec = tm->tm_nsec;
 	date->tzindex = 0;
 	date->tzoffset = tm->tm_gmtoff / 60;
+	return true;
 }
 
 size_t
@@ -111,7 +116,8 @@ datetime_strptime(struct datetime *date, const char *buf, const char *fmt)
 	char * ret = tnt_strptime(buf, fmt, &t);
 	if (ret == NULL)
 		return 0;
-	tm_to_datetime(&t, date);
+	if (tm_to_datetime(&t, date) == false)
+		return 0;
 	return ret - buf;
 }
 
