@@ -57,6 +57,14 @@
 #include "sequence.h"
 #include "sql.h"
 #include "constraint_id.h"
+#include "box.h"
+
+static void
+box_schema_version_bump(void)
+{
+	++schema_version;
+	box_broadcast_schema();
+}
 
 /* {{{ Auxiliary functions and methods. */
 
@@ -1684,7 +1692,7 @@ void
 UpdateSchemaVersion::alter(struct alter_space *alter)
 {
     (void)alter;
-    ++schema_version;
+    box_schema_version_bump();
 }
 
 /**
@@ -2259,7 +2267,7 @@ on_replace_dd_space(struct trigger * /* trigger */, void *event)
 		 * AlterSpaceOps are registered in case of space
 		 * create.
 		 */
-		++schema_version;
+		box_schema_version_bump();
 		/*
 		 * So may happen that until the DDL change record
 		 * is written to the WAL, the space is used for
@@ -2373,7 +2381,7 @@ on_replace_dd_space(struct trigger * /* trigger */, void *event)
 		 * deleting the space from the space_cache, since no
 		 * AlterSpaceOps are registered in case of space drop.
 		 */
-		++schema_version;
+		box_schema_version_bump();
 		struct trigger *on_commit =
 			txn_alter_trigger_new(on_drop_space_commit, old_space);
 		if (on_commit == NULL)
@@ -4238,6 +4246,7 @@ on_replace_dd_schema(struct trigger * /* trigger */, void *event)
 		if (tuple_field_uuid(new_tuple, BOX_CLUSTER_FIELD_UUID, &uu) != 0)
 			return -1;
 		REPLICASET_UUID = uu;
+		box_broadcast_id();
 		say_info("cluster uuid %s", tt_uuid_str(&uu));
 	} else if (strcmp(key, "version") == 0) {
 		if (new_tuple != NULL) {
@@ -5084,7 +5093,7 @@ on_replace_dd_trigger(struct trigger * /* trigger */, void *event)
 
 	txn_stmt_on_rollback(stmt, on_rollback);
 	txn_stmt_on_commit(stmt, on_commit);
-	++schema_version;
+	box_schema_version_bump();
 	return 0;
 }
 
@@ -5611,7 +5620,7 @@ on_replace_dd_fk_constraint(struct trigger * /* trigger*/, void *event)
 		space_reset_fk_constraint_mask(child_space);
 		space_reset_fk_constraint_mask(parent_space);
 	}
-	++schema_version;
+	box_schema_version_bump();
 	return 0;
 }
 
@@ -5867,7 +5876,7 @@ on_replace_dd_ck_constraint(struct trigger * /* trigger*/, void *event)
 
 	if (trigger_run(&on_alter_space, space) != 0)
 		return -1;
-	++schema_version;
+	box_schema_version_bump();
 	return 0;
 }
 
