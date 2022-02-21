@@ -482,7 +482,9 @@ space_before_replace(struct space *space, struct txn *txn,
 				container_of(h, struct tuple_constraint,
 					     space_cache_holder);
 			assert(constr->def.type == CONSTR_FKEY);
-			if (constr->fkey->foreign_index >= 0) {
+			if (constr->fkey->foreign_index == 0) {
+				continue;
+			} else if (constr->fkey->foreign_index >= 0) {
 				struct index *ind;
 				ind = space->index[constr->fkey->foreign_index];
 				(void)ind;

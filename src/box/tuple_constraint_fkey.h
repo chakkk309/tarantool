@@ -31,7 +31,8 @@ tuple_constraint_fkey_init(struct tuple_constraint *constraint,
  */
 int
 tuple_constraint_fkey_check_delete(const struct tuple_constraint *constraint,
-				   struct tuple *tuple);
+				   struct tuple *old_tuple,
+				   struct tuple *new_tuple);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -190,7 +190,8 @@ foreign_key_integrity_failed(const struct tuple_constraint *constr,
 
 int
 tuple_constraint_fkey_check_delete(const struct tuple_constraint *constr,
-				   struct tuple *tuple)
+				   struct tuple *old_tuple,
+				   struct tuple *new_tuple)
 {
 	if (constr->fkey->local_index < 0) {
 		foreign_key_integrity_failed(constr, "index was not found");
