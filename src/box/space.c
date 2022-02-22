@@ -470,31 +470,6 @@ space_before_replace(struct space *space, struct txn *txn,
 	if (index_get(index, key, part_count, &old_tuple) != 0)
 		return -1;
 
-	if (old_tuple != NULL) {
-		/*
-		 * Before deletion we must check that there are now tuples
-		 * in other spaces that refer to this tuple via foreign key
-		 * constraint.
-		 */
-		struct space_cache_holder *h;
-		rlist_foreach_entry(h, &space->space_cache_pin_list, link) {
-			struct tuple_constraint *constr =
-				container_of(h, struct tuple_constraint,
-					     space_cache_holder);
-			assert(constr->def.type == CONSTR_FKEY);
-			if (constr->fkey->foreign_index == 0) {
-				continue;
-			} else if (constr->fkey->foreign_index >= 0) {
-				struct index *ind;
-				ind = space->index[constr->fkey->foreign_index];
-				(void)ind;
-			}
-			if (tuple_constraint_fkey_check_delete(constr,
-							       old_tuple) != 0)
-				return -1;
-		}
-	}
-
 after_old_tuple_lookup:;
 
 	/*
@@ -571,6 +546,26 @@ after_old_tuple_lookup:;
 	}
 
 	assert(old_tuple != NULL || new_tuple != NULL);
+
+	if (old_tuple != NULL) {
+		/*
+		 * Before deleting we must check that there are no tuples
+		 * in other spaces that refer to this tuple via foreign key
+		 * constraint.
+		 */
+		struct space_cache_holder *h;
+		rlist_foreach_entry(h, &space->space_cache_pin_list, link) {
+			assert(h->type == SPACE_HOLDER_FOREIGN_KEY);
+			struct tuple_constraint *constr =
+				container_of(h, struct tuple_constraint,
+					     space_cache_holder);
+			assert(constr->def.type == CONSTR_FKEY);
+			if (tuple_constraint_fkey_check_delete(constr,
+							       old_tuple,
+							       new_tuple) != 0)
+				return -1;
+		}
+	}
 
 	/*
 	 * Execute all registered BEFORE triggers.

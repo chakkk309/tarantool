@@ -177,6 +177,18 @@ tuple_constraint_fkey_check(const struct tuple_constraint *constr,
 }
 
 /**
+ * Compare two msgpack values for equality.
+ */
+static bool
+mp_equal(const char *mp1, const char *mp2)
+{
+	const char *e1 = mp1, *e2 = mp2;
+	mp_next(&e1);
+	mp_next(&e2);
+	return (e1 - mp1) == (e2 - mp2) && memcmp(mp1, mp2, e1 - mp1) == 0;
+}
+
+/**
  * Set diag error ER_FOREIGN_KEY_INTEGRITY with given message.
  */
 static void
@@ -193,18 +205,29 @@ tuple_constraint_fkey_check_delete(const struct tuple_constraint *constr,
 				   struct tuple *old_tuple,
 				   struct tuple *new_tuple)
 {
-	if (constr->fkey->local_index < 0) {
-		foreign_key_integrity_failed(constr, "index was not found");
-		return -1;
-	}
-	if (constr->fkey->data->foreign_field_no < 0) {
+	assert(old_tuple != NULL);
+	int32_t foreign_field_no = constr->fkey->data->foreign_field_no;
+	if (foreign_field_no< 0) {
 		foreign_key_integrity_failed(constr, "wrong foreign field name");
 		return -1;
 	}
-	const char *key = tuple_field(tuple,
-				      constr->fkey->data->foreign_field_no);
-	if (key == NULL) {
-		foreign_key_integrity_failed(constr, "field not found");
+	const char *key = tuple_field(old_tuple, foreign_field_no);
+	if (key == NULL || mp_typeof(*key) == MP_NIL) {
+		/* No field - nobody can be bound to it.*/
+		return 0;
+	}
+	if (new_tuple != NULL) {
+		const char *old_key = tuple_field(old_tuple, foreign_field_no);
+		if (old_key != NULL && mp_equal(key, old_key)) {
+			/*
+			 * Foreign tuple is replaced with another with the
+			 * same field, so integrity cannot be broken.
+			 */
+			return 0;
+		}
+	}
+	if (constr->fkey->local_index < 0) {
+		foreign_key_integrity_failed(constr, "index was not found");
 		return -1;
 	}
 	struct index *index = constr->space->index[constr->fkey->local_index];
@@ -217,29 +240,15 @@ tuple_constraint_fkey_check_delete(const struct tuple_constraint *constr,
 		foreign_key_integrity_failed(constr, "wrong key type");
 		return -1;
 	}
-	if (index->def->opts.is_unique) {
-		if (index_get(index, key, part_count, &tuple) != 0) {
-			foreign_key_integrity_failed(constr,
-						     "index get failed");
-			return -1;
-		}
-		if (tuple != NULL) {
-			foreign_key_integrity_failed(constr,
-						     "tuple is referenced");
-			return -1;
-		}
-	} else {
-		ssize_t res = index_count(index, ITER_EQ, key, part_count);
-		if (res < 0) {
-			foreign_key_integrity_failed(constr,
-						     "index count failed");
-			return -1;
-		}
-		if (res > 0) {
-			foreign_key_integrity_failed(constr,
-						     "tuple is referenced");
-			return -1;
-		}
+
+	struct tuple *found_tuple;
+	if (index->def->opts.is_unique ?
+	    index_get(index, key, part_count, &found_tuple) :
+	    index_min(index, key, part_count, &found_tuple) != 0)
+		return -1;
+	if (found_tuple != NULL) {
+		foreign_key_integrity_failed(constr, "tuple is referenced");
+		return -1;
 	}
 	return 0;
 }

@@ -24,8 +24,8 @@ tuple_constraint_fkey_init(struct tuple_constraint *constraint,
 
 
 /**
- * Check that @a tuple, that can potentially be a foreign tuple due to
- * @a constraint, is allowed to be deleted.
+ * Check that @a old_tuple, that can potentially be a foreign tuple due to
+ * @a constraint, is allowed to be deleted or overwritten by @a new_tuple.
  * return 0: the tuple can be deleted, data integrity is safe.
  * return -1: the tuple can't be deleted, diag is set.
  */
