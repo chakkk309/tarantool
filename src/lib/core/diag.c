@@ -30,6 +30,7 @@
  */
 #include "diag.h"
 #include "fiber.h"
+#include "trivia/util.h"
 
 void
 error_ref(struct error *e)
@@ -131,6 +132,33 @@ error_create(struct error *e,
 	e->errmsg[0] = '\0';
 	e->cause = NULL;
 	e->effect = NULL;
+}
+
+static inline struct error *
+error_copy_without_linking(const struct error *src)
+{
+	struct error *copy = xmalloc(sizeof(*copy));
+	*copy = *src;
+	copy->refs = 0;
+	error_payload_copy(&copy->payload, &src->payload);
+	copy->cause = copy->effect = NULL;
+	return copy;
+}
+
+struct error *
+error_copy(const struct error *src)
+{
+	struct error * const copy = error_copy_without_linking(src);
+	struct error *err = copy;
+	struct error *cause = NULL;
+	while (err->cause != NULL) {
+		cause = error_copy_without_linking(err->cause);
+		cause->effect = err;
+		error_ref(err);
+		err->cause = cause;
+		err = cause;
+	}
+	return copy;
 }
 
 void
