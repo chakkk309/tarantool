@@ -441,11 +441,48 @@ test_payload_move(void)
 	footer();
 }
 
+static void
+test_payload_copy(void)
+{
+	header();
+	plan(11);
+
+	struct error_payload p1, p2;
+	error_payload_create(&p1);
+	error_payload_copy(&p2, &p1);
+	ok(p1.count == 0 && p1.fields == NULL, "empty");
+	ok(p2.count == 0 && p2.fields == NULL, "copied empty");
+
+	error_payload_set_str(&p1, "key", "value");
+	error_payload_copy(&p2, &p1);
+	is(p2.count, 1, "got 1 field");
+	isnt(p2.fields, NULL, "got 1 field");
+	is(strcmp(error_payload_get_str(&p2, "key"), "value"), 0, "key");
+	error_payload_destroy(&p2);
+
+	error_payload_set_str(&p1, "key1", "value1");
+	error_payload_set_str(&p1, "key2", "value2");
+	error_payload_set_str(&p1, "key3", "value3");
+	error_payload_copy(&p2, &p1);
+	is(p2.count, 4, "got 4 field");
+	isnt(p2.fields, NULL, "got 4 field");
+	is(strcmp(error_payload_get_str(&p2, "key"), "value"), 0, "key");
+	is(strcmp(error_payload_get_str(&p2, "key1"), "value1"), 0, "key1");
+	is(strcmp(error_payload_get_str(&p2, "key2"), "value2"), 0, "key2");
+	is(strcmp(error_payload_get_str(&p2, "key3"), "value3"), 0, "key3");
+	
+	error_payload_destroy(&p1);
+	error_payload_destroy(&p2);
+	
+	check_plan();
+	footer();
+}
+
 int
 main(void)
 {
 	header();
-	plan(9);
+	plan(10);
 
 	random_init();
 
@@ -458,6 +495,7 @@ main(void)
 	test_payload_field_mp();
 	test_payload_clear();
 	test_payload_move();
+	test_payload_copy();
 
 	random_free();
 
