@@ -148,6 +148,9 @@ error_copy_without_linking(const struct error *src)
 struct error *
 error_copy(const struct error *src)
 {
+	if (src == NULL) {
+		return NULL;
+	}
 	struct error * const copy = error_copy_without_linking(src);
 	struct error *err = copy;
 	struct error *cause = NULL;
