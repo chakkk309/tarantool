@@ -1,5 +1,5 @@
 	*** main ***
-1..9
+1..10
 	*** test_payload_field_str ***
     1..15
     ok 1 - no fields in the beginning
@@ -158,4 +158,18 @@ ok 8 - subtests
     ok 7 - key
 ok 9 - subtests
 	*** test_payload_move: done ***
+	*** test_payload_copy ***
+    1..10
+    ok 1 - copied empty
+    ok 2 - got 1 field
+    ok 3 - got 1 field
+    ok 4 - key
+    ok 5 - got 4 fields
+    ok 6 - got 4 fields
+    ok 7 - key
+    ok 8 - key1
+    ok 9 - key2
+    ok 10 - key3
+ok 10 - subtests
+	*** test_payload_copy: done ***
 	*** main: done ***
