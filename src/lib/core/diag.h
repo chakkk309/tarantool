@@ -343,6 +343,7 @@ diag_set_error(struct diag *diag, struct error *e)
 static inline void
 diag_set_error_copy(struct diag *diag, const struct error *e)
 {
+	assert(e != NULL);
 	diag_clear(diag);
 	diag->last = error_copy(e);	
 }
