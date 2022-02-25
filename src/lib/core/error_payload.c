@@ -317,7 +317,7 @@ error_payload_copy(struct error_payload *dst, const struct error_payload *src)
 	} else { 
 		assert(count == 0);
 		dst->fields = NULL;
-		dst->fields = 0;
+		dst->count = 0;
 	}
 }
 
