@@ -445,12 +445,11 @@ static void
 test_payload_copy(void)
 {
 	header();
-	plan(11);
+	plan(10);
 
 	struct error_payload p1, p2;
 	error_payload_create(&p1);
 	error_payload_copy(&p2, &p1);
-	ok(p1.count == 0 && p1.fields == NULL, "empty");
 	ok(p2.count == 0 && p2.fields == NULL, "copied empty");
 
 	error_payload_set_str(&p1, "key", "value");
@@ -464,8 +463,8 @@ test_payload_copy(void)
 	error_payload_set_str(&p1, "key2", "value2");
 	error_payload_set_str(&p1, "key3", "value3");
 	error_payload_copy(&p2, &p1);
-	is(p2.count, 4, "got 4 field");
-	isnt(p2.fields, NULL, "got 4 field");
+	is(p2.count, 4, "got 4 fields");
+	isnt(p2.fields, NULL, "got 4 fields");
 	is(strcmp(error_payload_get_str(&p2, "key"), "value"), 0, "key");
 	is(strcmp(error_payload_get_str(&p2, "key1"), "value1"), 0, "key1");
 	is(strcmp(error_payload_get_str(&p2, "key2"), "value2"), 0, "key2");
