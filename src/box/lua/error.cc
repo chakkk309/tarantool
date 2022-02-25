@@ -211,6 +211,16 @@ luaT_error_set(struct lua_State *L)
 }
 
 static int
+luaT_error_copy(struct lua_State *L)
+{
+	if (lua_gettop(L) == 0)
+		return luaL_error(L, "Usage: box.error.copy(error)");
+	struct error *e = luaL_checkerror(L, 1);
+	diag_set_error_copy(&fiber()->diag, e);
+	return 0;
+}
+
+static int
 lbox_errinj_set(struct lua_State *L)
 {
 	char *name = (char*)luaL_checkstring(L, 1);
@@ -327,6 +337,10 @@ box_lua_error_init(struct lua_State *L) {
 		{
 			lua_pushcfunction(L, luaT_error_set);
 			lua_setfield(L, -2, "set");
+		}
+		{
+			lua_pushcfunction(L, luaT_error_copy);
+			lua_setfield(L, -2, "copy");
 		}
 		lua_setfield(L, -2, "__index");
 	}
