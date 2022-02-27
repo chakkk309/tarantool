@@ -133,15 +133,20 @@ error_create(struct error *e,
 	e->cause = NULL;
 	e->effect = NULL;
 }
+static void 
+error_destroy(struct error *e) 
+{
+	free(e);
+}
 
 static inline struct error *
 error_copy_without_linking(const struct error *src)
 {
 	struct error *copy = xmalloc(sizeof(*copy));
 	*copy = *src;
+	copy->destroy = error_destroy;
 	copy->refs = 0;
 	error_payload_copy(&copy->payload, &src->payload);
-	copy->cause = copy->effect = NULL;
 	return copy;
 }
 
@@ -152,13 +157,15 @@ error_copy(const struct error *src)
 		return NULL;
 	}
 	struct error * const copy = error_copy_without_linking(src);
+	copy->effect = NULL;
+	error_ref(copy);
 	struct error *err = copy;
 	struct error *cause = NULL;
 	while (err->cause != NULL) {
 		cause = error_copy_without_linking(err->cause);
 		cause->effect = err;
-		error_ref(err);
 		err->cause = cause;
+		error_ref(err->cause);
 		err = cause;
 	}
 	return copy;
