@@ -150,25 +150,22 @@ error_copy_without_linking(const struct error *src)
 	return copy;
 }
 
-struct error *
-error_copy(const struct error *src)
-{
+static struct error *
+error_copy_recursive(const struct error *src, struct error *effect) {
 	if (src == NULL) {
 		return NULL;
 	}
-	struct error * const copy = error_copy_without_linking(src);
-	copy->effect = NULL;
+	struct error *copy = error_copy_without_linking(src);
+	copy->effect = effect;
 	error_ref(copy);
-	struct error *err = copy;
-	struct error *cause = NULL;
-	while (err->cause != NULL) {
-		cause = error_copy_without_linking(err->cause);
-		cause->effect = err;
-		err->cause = cause;
-		error_ref(err->cause);
-		err = cause;
-	}
+	copy->cause = error_copy_recursive(src->cause, copy);
 	return copy;
+}
+
+struct error *
+error_copy(const struct error *e)
+{
+	return error_copy_recursive(e, NULL);
 }
 
 void
