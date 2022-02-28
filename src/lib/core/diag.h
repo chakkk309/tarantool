@@ -341,7 +341,7 @@ diag_set_error(struct diag *diag, struct error *e)
  * \param e error to copy
  */
 static inline void
-diag_set_error_copy(struct diag *diag, const struct error *e)
+diag_copy_error(struct diag *diag, const struct error *e)
 {
 	assert(e != NULL);
 	/* 

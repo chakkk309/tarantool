@@ -451,7 +451,7 @@ netbox_request_push_result(struct netbox_request *request, struct lua_State *L)
 	}
 	if (request->error != NULL) {
 		assert(request->result_ref == LUA_NOREF);
-		diag_set_error_copy(diag_get(), request->error);
+		diag_copy_error(diag_get(), request->error);
 		return luaT_push_nil_and_error(L);
 	} else {
 		assert(request->result_ref != LUA_NOREF);
