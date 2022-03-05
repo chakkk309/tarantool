@@ -29,6 +29,7 @@ class SSLError: public Exception {
 public:
 	SSLError(): Exception(&type_SSLError, NULL, 0) {}
 	virtual void raise() { throw this; }
+	virtual struct error *dup() const { return new SSLError; } 
 };
 
 #endif /* defined(__cplusplus) */

@@ -59,6 +59,13 @@ exception_log(struct error *error)
 	e->log();
 }
 
+static struct error *
+exception_dup(const struct error *error)
+{
+	Exception *e = (Exception *) error;
+	return e->dup();
+}
+
 const char *
 exception_get_string(struct error *e, const struct method_info *method)
 {
@@ -115,7 +122,7 @@ Exception::Exception(const struct type_info *type_arg, const char *file,
 		     unsigned line)
 {
 	error_create(this, exception_destroy, exception_raise,
-		     exception_log, type_arg, file, line);
+		     exception_log, exception_dup, type_arg, file, line);
 }
 
 void

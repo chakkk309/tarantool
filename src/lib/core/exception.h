@@ -73,6 +73,7 @@ public:
 	int get_line() const { return line; }
 	const char *get_errmsg() const { return errmsg; }
 
+	virtual struct error *dup() const = 0;
 	NORETURN virtual void raise() = 0;
 	virtual void log() const;
 	virtual ~Exception();
@@ -85,6 +86,8 @@ protected:
 
 class SystemError: public Exception {
 public:
+	virtual struct error *dup() const { return new SystemError; }
+
 	virtual void raise() { throw this; }
 
 	SystemError(const char *file, unsigned line,
@@ -110,10 +113,9 @@ public:
 	{
 	}
 
-	virtual void raise()
-	{
-		throw this;
-	}
+	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new SocketError; }
 };
 
 class OutOfMemory: public SystemError {
@@ -128,6 +130,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new OutOfMemory; }
 };
 
 class TimedOut: public SystemError {
@@ -140,6 +144,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new TimedOut; }
 };
 
 class ChannelIsClosed: public Exception {
@@ -152,6 +158,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new ChannelIsClosed; }
 };
 
 /**
@@ -169,6 +177,7 @@ public:
 
 	virtual void log() const;
 	virtual void raise() { throw this; }
+	virtual struct error *dup() const { return new FiberIsCancelled; }
 };
 
 class LuajitError: public Exception {
@@ -182,6 +191,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new LuajitError; }
 };
 
 class IllegalParams: public Exception {
@@ -194,6 +205,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new IllegalParams; }
 };
 
 class CollationError: public Exception {
@@ -207,6 +220,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new CollationError; }
 };
 
 class SwimError: public Exception {
@@ -219,6 +234,8 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new SwimError; }
 };
 
 class CryptoError: public Exception {
@@ -231,12 +248,20 @@ public:
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new CryptoError; }
 };
 
 class RaftError: public Exception {
 public:
+	RaftError()
+		:Exception(&type_RaftError, NULL, 0)
+	{
+	}
+
 	RaftError(const char *file, unsigned line, const char *format, ...);
 	virtual void raise() { throw this; }
+	virtual struct error *dup() const { return new RaftError; }
 };
 
 /**

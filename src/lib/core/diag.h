@@ -53,6 +53,7 @@ struct type_info;
 struct error;
 
 typedef void (*error_f)(struct error *e);
+typedef struct error *(*error_dup_f)(const struct error *e);
 
 /**
  * Error diagnostics needs to be equally usable in C and C++
@@ -72,6 +73,7 @@ struct error {
 	error_f destroy;
 	error_f raise;
 	error_f log;
+	error_dup_f dup;
 	const struct type_info *type;
 	/**
 	 * Reference counting is basically required since
@@ -260,9 +262,8 @@ error_log(struct error *e)
 
 void
 error_create(struct error *e,
-	     error_f create, error_f raise, error_f log,
-	     const struct type_info *type, const char *file,
-	     unsigned line);
+	     error_f create, error_f raise, error_f log, error_dup_f dup,
+	     const struct type_info *type, const char *file, unsigned line);
 
 struct error *
 error_copy(const struct error *src);

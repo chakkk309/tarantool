@@ -203,6 +203,11 @@ public:
 		throw this;
 	}
 
+	virtual struct error *dup() const
+	{
+		return new ClientError;
+	}
+
 	virtual void log() const;
 
 	int
@@ -234,6 +239,16 @@ public:
 		/* TODO: actually calls ClientError::log */
 		log();
 	}
+
+	LoggedError()
+		: ClientError()
+	{
+	}
+
+	virtual struct error *dup() const 
+	{
+		return new LoggedError;
+	}	
 };
 
 /**
@@ -270,6 +285,11 @@ public:
 	{
 		return error_get_str(this, "access_type");
 	}
+
+	virtual struct error *dup() const 
+	{
+		return new AccessDeniedError;
+	}
 };
 
 /**
@@ -299,6 +319,8 @@ struct XlogError: public Exception
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new XlogError; }
 };
 
 struct XlogGapError: public XlogError
@@ -312,6 +334,8 @@ struct XlogGapError: public XlogError
 	}
 
 	virtual void raise() { throw this; }
+
+	virtual struct error *dup() const { return new XlogGapError; }
 };
 
 class CustomError: public ClientError
@@ -332,6 +356,8 @@ public:
 	{
 		return error_get_str(this, "custom_type");
 	}
+
+	virtual struct error *dup() const { return new CustomError; }
 };
 
 #endif /* defined(__cplusplus) */

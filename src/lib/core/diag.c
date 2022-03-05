@@ -115,12 +115,13 @@ error_set_prev(struct error *e, struct error *prev)
 
 void
 error_create(struct error *e,
-	     error_f destroy, error_f raise, error_f log,
+	     error_f destroy, error_f raise, error_f log, error_dup_f dup,
 	     const struct type_info *type, const char *file, unsigned line)
 {
 	e->destroy = destroy;
 	e->raise = raise;
 	e->log = log;
+	e->dup = dup;
 	e->type = type;
 	e->refs = 0;
 	e->saved_errno = 0;
@@ -133,20 +134,23 @@ error_create(struct error *e,
 	e->cause = NULL;
 	e->effect = NULL;
 }
-static void 
-error_destroy(struct error *e) 
-{
-	free(e);
-}
 
 static inline struct error *
 error_copy_without_linking(const struct error *src)
 {
-	struct error *copy = xmalloc(sizeof(*copy));
-	*copy = *src;
-	copy->destroy = error_destroy;
+	struct error *copy = src->dup(src);
+	copy->destroy = src->destroy;
+	copy->raise = src->raise;
+	copy->log = src->log;
+	copy->dup = src->dup;
+	copy->type = src->type;
 	copy->refs = 0;
+	copy->saved_errno = src->saved_errno;
+	copy->code = src->code;
 	error_payload_copy(&copy->payload, &src->payload);
+	error_set_location(copy, src->file, src->line);
+	memcpy(copy->errmsg, src->errmsg, strlen(src->errmsg));
+	copy->cause = copy->effect = NULL;
 	return copy;
 }
 
