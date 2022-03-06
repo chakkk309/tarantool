@@ -14,6 +14,7 @@ enum {
 };
 
 typedef void (*error_f)(struct error *e);
+typedef struct error *(*error_dup_f)(const struct error *e);
 
 struct error_field {
     char *_data;
@@ -30,6 +31,7 @@ struct error {
     error_f _destroy;
     error_f _raise;
     error_f _log;
+    error_dup_f dup;
     const struct type_info *_type;
     int64_t _refs;
     int _saved_errno;
