@@ -209,7 +209,7 @@ luaT_error_set(struct lua_State *L)
 	diag_set_error(&fiber()->diag, e);
 	return 0;
 }
-/*
+
 static int
 luaT_error_copy(struct lua_State *L)
 {
@@ -218,7 +218,7 @@ luaT_error_copy(struct lua_State *L)
 	struct error *e = luaL_checkerror(L, 1);
 	diag_copy_error(&fiber()->diag, e);
 	return 0;
-}*/
+}
 
 static int
 lbox_errinj_set(struct lua_State *L)
@@ -337,11 +337,11 @@ box_lua_error_init(struct lua_State *L) {
 		{
 			lua_pushcfunction(L, luaT_error_set);
 			lua_setfield(L, -2, "set");
-		}/*
+		}
 		{
 			lua_pushcfunction(L, luaT_error_copy);
 			lua_setfield(L, -2, "copy");
-		}*/
+		}
 		lua_setfield(L, -2, "__index");
 	}
 	lua_setmetatable(L, -2);
