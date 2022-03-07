@@ -149,7 +149,9 @@ error_copy_without_linking(const struct error *src)
 	copy->code = src->code;
 	error_payload_copy(&copy->payload, &src->payload);
 	error_set_location(copy, src->file, src->line);
-	memcpy(copy->errmsg, src->errmsg, strlen(src->errmsg));
+	const size_t errlen = strlen(src->errmsg);  
+	memcpy(copy->errmsg, src->errmsg, errlen);
+	copy->errmsg[errlen] = '\0';
 	copy->cause = copy->effect = NULL;
 	return copy;
 }
