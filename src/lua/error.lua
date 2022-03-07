@@ -31,7 +31,7 @@ struct error {
     error_f _destroy;
     error_f _raise;
     error_f _log;
-    error_dup_f dup;
+    error_dup_f _dup;
     const struct type_info *_type;
     int64_t _refs;
     int _saved_errno;
@@ -46,6 +46,9 @@ struct error {
     struct error *_cause;
     struct error *_effect;
 };
+
+struct error *
+error_copy(const struct error *e);
 
 int
 error_set_prev(struct error *e, struct error *prev);
@@ -105,6 +108,13 @@ local function error_prev(err)
     else
         return nil
     end
+end
+
+local function error_copy(err)
+    if not ffi.istype('const struct error', err) then
+        error("Usage: error1:set_copy(error2)")
+    end
+    return ffi.C.error_copy(err)
 end
 
 local function error_set_prev(err, prev)
