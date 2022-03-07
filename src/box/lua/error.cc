@@ -213,11 +213,13 @@ luaT_error_set(struct lua_State *L)
 static int
 luaT_error_copy(struct lua_State *L)
 {
-	if (lua_gettop(L) == 0)
+	if (lua_gettop(L) != 1)
 		return luaL_error(L, "Usage: box.error.copy(error)");
 	struct error *e = luaL_checkerror(L, 1);
-	diag_copy_error(&fiber()->diag, e);
-	return 0;
+	struct error *copy = error_copy(e);
+	lua_settop(L, 0);
+	luaT_pusherror(L, copy);	
+	return 1;
 }
 
 static int
