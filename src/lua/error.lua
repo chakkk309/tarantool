@@ -112,7 +112,7 @@ end
 
 local function error_copy(err)
     if not ffi.istype('const struct error', err) then
-        error("Usage: error1:set_copy(error2)")
+        error("Usage: error:copy()")
     end
     return ffi.C.error_copy(err)
 end
@@ -180,11 +180,12 @@ local function error_serialize(err)
 end
 
 local error_methods = {
-    ["unpack"] = error_unpack;
-    ["raise"] = error_raise;
-    ["match"] = error_match; -- Tarantool 1.6 backward compatibility
-    ["__serialize"] = error_serialize;
-    ["set_prev"] = error_set_prev;
+    ["unpack"]       = error_unpack;
+    ["raise"]        = error_raise;
+    ["copy"]         = error_copy;
+    ["match"]        = error_match; -- Tarantool 1.6 backward compatibility
+    ["__serialize"]  = error_serialize;
+    ["set_prev"]     = error_set_prev;
 }
 
 local function error_index(err, key)

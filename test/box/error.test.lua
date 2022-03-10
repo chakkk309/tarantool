@@ -286,7 +286,7 @@ e1:set_prev(e2)
 e2:set_prev(e3)
 e3:set_prev(e4)
 
-e1_copy = box.error.copy(e1)
+e1_copy = e1:copy()
 -- Deep copy check
 assert(e1_copy.prev.prev.prev ~= e4)
 assert(e1_copy.prev.prev ~= e3)
@@ -302,3 +302,13 @@ assert(e1_copy.prev ~= nil)
 -- set_prev with the copied object won't result in a circle error
 e1_copy:set_prev(e1)
 e1_copy:set_prev(e1)
+-- wait_result returns copy of the internal error
+box.cfg{listen = 3301}
+c = require('net.box').connect(3301)
+f = c:call('foo', {}, {is_async = true})
+_, e1 = f:wait_result()
+assert(e1.prev == nil)
+e1:set_prev(box.error.new(box.error.UNKNOWN))
+_, e2 = f:wait_result()
+assert(e2.prev ~= e1.prev)
+assert(e2.prev == nil)

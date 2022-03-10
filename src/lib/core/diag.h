@@ -266,7 +266,7 @@ error_create(struct error *e,
 	     const struct type_info *type, const char *file, unsigned line);
 
 struct error *
-error_copy(const struct error *src);
+error_copy(const struct error *e);
 
 void
 error_set_location(struct error *e, const char *file, int line);
