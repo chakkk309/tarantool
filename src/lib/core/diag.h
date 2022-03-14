@@ -346,8 +346,7 @@ diag_copy_error(struct diag *diag, const struct error *e)
 {
 	assert(e != NULL);
 	/* 
-	 * error_copy after diag_clear may appeal to the destroyed error 
-	 * in case of diag_set_error_copy(diag, diag->last) 
+	 * error_copy after diag_clear may appeal to the destroyed error
 	 */
 	struct error *copy = error_copy(e);
 	diag_clear(diag);
