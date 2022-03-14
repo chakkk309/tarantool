@@ -1011,23 +1011,23 @@ e3:set_prev(e4)
  | ---
  | ...
 
-e1_copy = box.error.copy(e1)
+copy1 = e1:copy()
  | ---
  | ...
 -- Deep copy check
-assert(e1_copy.prev.prev.prev ~= e4)
+assert(copy1.prev.prev.prev ~= e4)
  | ---
  | - true
  | ...
-assert(e1_copy.prev.prev ~= e3)
+assert(copy1.prev.prev ~= e3)
  | ---
  | - true
  | ...
-assert(e1_copy.prev ~= e2)
+assert(copy1.prev ~= e2)
  | ---
  | - true
  | ...
-assert(e1_copy ~= e1)
+assert(copy1 ~= e1)
  | ---
  | - true
  | ...
@@ -1035,28 +1035,63 @@ assert(e1_copy ~= e1)
 e3:set_prev(nil)
  | ---
  | ...
-assert(e1_copy.prev.prev.prev ~= nil)
+assert(copy1.prev.prev.prev ~= nil)
  | ---
  | - true
  | ...
 e2:set_prev(nil)
  | ---
  | ...
-assert(e1_copy.prev.prev ~= nil)
+assert(copy1.prev.prev ~= nil)
  | ---
  | - true
  | ...
 e1:set_prev(nil)
  | ---
  | ...
-assert(e1_copy.prev ~= nil)
+assert(copy1.prev ~= nil)
  | ---
  | - true
  | ...
 -- set_prev with the copied object won't result in a circle error
-e1_copy:set_prev(e1)
+copy1:set_prev(e1)
  | ---
  | ...
-e1_copy:set_prev(e1)
+copy1:set_prev(e1)
  | ---
+ | ...
+-- wait_result returns a copy of the internal error
+box.cfg{listen = 3301}
+ | ---
+ | ...
+c = require('net.box').connect(3301)
+ | ---
+ | ...
+f = c:call('foo', {}, {is_async = true})
+ | ---
+ | ...
+_, e1 = f:wait_result()
+ | ---
+ | ...
+assert(e1.prev == nil)
+ | ---
+ | - true
+ | ...
+e1:set_prev(box.error.new(box.error.UNKNOWN))
+ | ---
+ | ...
+_, e2 = f:wait_result()
+ | ---
+ | ...
+assert(e1 ~= e2)
+ | ---
+ | - true
+ | ...
+assert(e2.prev ~= e1.prev)
+ | ---
+ | - true
+ | ...
+assert(e2.prev == nil)
+ | ---
+ | - true
  | ...
