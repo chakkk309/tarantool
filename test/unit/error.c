@@ -445,7 +445,7 @@ static void
 test_payload_copy(void)
 {
 	header();
-	plan(10);
+	plan(13);
 
 	struct error_payload p1, p2;
 	error_payload_create(&p1);
@@ -469,6 +469,13 @@ test_payload_copy(void)
 	is(strcmp(error_payload_get_str(&p2, "key1"), "value1"), 0, "key1");
 	is(strcmp(error_payload_get_str(&p2, "key2"), "value2"), 0, "key2");
 	is(strcmp(error_payload_get_str(&p2, "key3"), "value3"), 0, "key3");
+	
+	error_payload_set_str(&p1, "key4", "value4");
+	is(p2.count, 4, "still 4 fields");
+
+	error_payload_clear(&p1, "key1");
+	is(p2.count, 4, "still 4 fields");
+	is(strcmp(error_payload_get_str(&p2, "key1"), "value1"), 0, "key1");
 	
 	error_payload_destroy(&p1);
 	error_payload_destroy(&p2);
