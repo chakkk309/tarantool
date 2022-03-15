@@ -346,6 +346,23 @@ diag_set_error(struct diag *diag, struct error *e)
 }
 
 /**
+ * Set a copy of the received error to the diagnostics area, replacing existent.
+ * \param diag Diagnostics area.
+ * \param e Error to be copied.
+ */
+static inline void
+diag_copy_error(struct diag *diag, const struct error *e)
+{
+	assert(e != NULL);
+	/*
+	 * error_copy after diag_clear may appeal to the destroyed error.
+	 */
+	struct error *copy = error_copy(e);
+	diag_clear(diag);
+	diag->last = copy;
+}
+
+/**
  * Add a new error to the diagnostics area. It is added to the
  * tail, so that list forms stack.
  * @param diag Diagnostics area.

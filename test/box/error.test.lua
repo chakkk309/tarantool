@@ -302,3 +302,14 @@ assert(copy1.prev ~= nil)
 -- set_prev with the copied object won't result in a circle error
 copy1:set_prev(e1)
 copy1:set_prev(e1)
+-- net.box returns a copy of the internal error
+box.cfg{listen = 3301}
+c = require('net.box').connect(3301)
+f = c:call('foo', {}, {is_async = true})
+_, e1 = f:wait_result()
+assert(e1.prev == nil)
+e1:set_prev(box.error.new(box.error.UNKNOWN))
+_, e2 = f:wait_result()
+assert(e1 ~= e2)
+assert(e2.prev ~= e1.prev)
+assert(e2.prev == nil)
