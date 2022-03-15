@@ -14,6 +14,7 @@ enum {
 };
 
 typedef void (*error_f)(struct error *e);
+typedef struct error *(*error_dup_f)(const struct error *e);
 
 struct error_field {
     char *_data;
@@ -30,6 +31,7 @@ struct error {
     error_f _destroy;
     error_f _raise;
     error_f _log;
+    error_dup_f _dup;
     const struct type_info *_type;
     int64_t _refs;
     int _saved_errno;
@@ -44,6 +46,9 @@ struct error {
     struct error *_cause;
     struct error *_effect;
 };
+
+struct error *
+error_copy(const struct error *e);
 
 int
 error_set_prev(struct error *e, struct error *prev);
@@ -103,6 +108,13 @@ local function error_prev(err)
     else
         return nil
     end
+end
+
+local function error_copy(err)
+    if not ffi.istype('const struct error', err) then
+        error("Usage: error:copy()")
+    end
+    return ffi.C.error_copy(err)
 end
 
 local function error_set_prev(err, prev)
@@ -168,11 +180,12 @@ local function error_serialize(err)
 end
 
 local error_methods = {
-    ["unpack"] = error_unpack;
-    ["raise"] = error_raise;
-    ["match"] = error_match; -- Tarantool 1.6 backward compatibility
-    ["__serialize"] = error_serialize;
-    ["set_prev"] = error_set_prev;
+    ["unpack"]       = error_unpack;
+    ["raise"]        = error_raise;
+    ["copy"]         = error_copy;
+    ["match"]        = error_match; -- Tarantool 1.6 backward compatibility
+    ["__serialize"]  = error_serialize;
+    ["set_prev"]     = error_set_prev;
 }
 
 local function error_index(err, key)

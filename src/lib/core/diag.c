@@ -30,6 +30,7 @@
  */
 #include "diag.h"
 #include "fiber.h"
+#include "trivia/util.h"
 
 void
 error_ref(struct error *e)
@@ -114,12 +115,13 @@ error_set_prev(struct error *e, struct error *prev)
 
 void
 error_create(struct error *e,
-	     error_f destroy, error_f raise, error_f log,
+	     error_f destroy, error_f raise, error_f log, error_dup_f dup,
 	     const struct type_info *type, const char *file, unsigned line)
 {
 	e->destroy = destroy;
 	e->raise = raise;
 	e->log = log;
+	e->dup = dup;
 	e->type = type;
 	e->refs = 0;
 	e->saved_errno = 0;
@@ -131,6 +133,62 @@ error_create(struct error *e,
 	e->errmsg[0] = '\0';
 	e->cause = NULL;
 	e->effect = NULL;
+}
+
+/**
+ * Copy only the received error node.
+ * The copied error has no prev and next nodes
+ * and ref copunter is 0.
+ *
+ * @param src original error.
+ * @return copied error.
+ */
+static inline struct error *
+error_copy_without_linking(const struct error *src)
+{
+	struct error *copy = src->dup(src);
+	copy->destroy = src->destroy;
+	copy->raise = src->raise;
+	copy->log = src->log;
+	copy->dup = src->dup;
+	copy->type = src->type;
+	copy->refs = 0;
+	copy->saved_errno = src->saved_errno;
+	copy->code = src->code;
+	error_payload_copy(&copy->payload, &src->payload);
+	error_set_location(copy, src->file, src->line);
+	const size_t errlen = strlen(src->errmsg);
+	memcpy(copy->errmsg, src->errmsg, errlen);
+	copy->errmsg[errlen] = '\0';
+	copy->cause = NULL;
+	copy->effect = NULL;
+	return copy;
+}
+
+/**
+ * @brief Recursive copy of received error and it's previous nodes.
+ *
+ * @param src origina error.
+ * @param effect New effect for copied node. Should be NULL for first iteration.
+ * @return Copy of the original error.
+ */
+static struct error *
+error_copy_recursive(const struct error *src, struct error *effect)
+{
+	if (src == NULL) {
+		return NULL;
+	}
+	struct error *copy = error_copy_without_linking(src);
+	copy->effect = effect;
+	error_ref(copy);
+	copy->cause = error_copy_recursive(src->cause, copy);
+	return copy;
+}
+
+struct error *
+error_copy(const struct error *e)
+{
+	return error_copy_recursive(e, NULL);
 }
 
 void

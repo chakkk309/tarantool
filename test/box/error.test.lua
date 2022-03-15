@@ -275,3 +275,30 @@ box.schema.func.drop('runtimeerror')
 --
 err = box.error.new('TestType', 'Message arg1: %s. Message arg2: %u', '1', 2)
 err.message
+
+-- gh-6632: add copy constructor for error object
+--
+e1 = box.error.new({code = 1, reason = "1"})
+e2 = box.error.new({code = 2, reason = "2"})
+e3 = box.error.new({code = 3, reason = "3"})
+e4 = box.error.new({code = 4, reason = "4"})
+e1:set_prev(e2)
+e2:set_prev(e3)
+e3:set_prev(e4)
+
+copy1 = e1:copy()
+-- Deep copy check
+assert(copy1.prev.prev.prev ~= e4)
+assert(copy1.prev.prev ~= e3)
+assert(copy1.prev ~= e2)
+assert(copy1 ~= e1)
+-- The copy object must be independent of the source object
+e3:set_prev(nil)
+assert(copy1.prev.prev.prev ~= nil)
+e2:set_prev(nil)
+assert(copy1.prev.prev ~= nil)
+e1:set_prev(nil)
+assert(copy1.prev ~= nil)
+-- set_prev with the copied object won't result in a circle error
+copy1:set_prev(e1)
+copy1:set_prev(e1)
