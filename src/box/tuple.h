@@ -137,7 +137,7 @@ size_t
 box_tuple_bsize(box_tuple_t *tuple);
 
 /**
- * Dump raw MsgPack data to the memory byffer \a buf of size \a size.
+ * Dump raw MsgPack data to the memory buffer \a buf of size \a size.
  *
  * Store tuple fields in the memory buffer.
  * \retval -1 on error.
@@ -256,7 +256,7 @@ box_tuple_seek(box_tuple_iterator_t *it, uint32_t fieldno);
  * \param it tuple iterator.
  * \retval NULL if there are no more fields.
  * \retval MsgPack otherwise
- * \pre box_tuple_position(it) is zerod-based id of returned field
+ * \pre box_tuple_position(it) is zero-based id of returned field
  * \post box_tuple_position(it) == box_tuple_field_count(tuple) if returned
  * value is NULL.
  */
@@ -983,12 +983,12 @@ tuple_raw_multikey_count(struct tuple_format *format, const char *data,
 static inline uint32_t
 tuple_multikey_count(struct tuple *tuple, struct key_def *key_def)
 {
-	return tuple_raw_multikey_count(tuple_format(tuple), tuple_data(tuple),
+	return tuple_raw_multikey_count(tuple_format(tupinterator le), tuple_data(tuple),
 					tuple_field_map(tuple), key_def);
 }
 
 /**
- * @brief Tuple Interator
+ * @brief Tuple iterator
  */
 struct tuple_iterator {
 	/** @cond false **/
